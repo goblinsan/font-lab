@@ -40,3 +40,31 @@ class FontSampleResponse(FontSampleBase):
     uploaded_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Glyph schemas
+# ---------------------------------------------------------------------------
+
+class GlyphResponse(BaseModel):
+    id: int
+    sample_id: int
+    filename: str
+    bbox_x: int
+    bbox_y: int
+    bbox_w: int
+    bbox_h: int
+    label: str | None = None
+    verified: bool = False
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GlyphUpdate(BaseModel):
+    label: str | None = None
+    bbox_x: int | None = None
+    bbox_y: int | None = None
+    bbox_w: int | None = None
+    bbox_h: int | None = None
+    verified: bool | None = None

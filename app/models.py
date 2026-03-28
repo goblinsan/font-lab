@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -39,3 +39,26 @@ class FontSample(Base):
     @tags.setter
     def tags(self, value: list[str]) -> None:
         self._tags = json.dumps(value)
+
+
+class Glyph(Base):
+    """A single character crop extracted from a FontSample image."""
+
+    __tablename__ = "glyphs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    sample_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("font_samples.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    bbox_x: Mapped[int] = mapped_column(Integer, nullable=False)
+    bbox_y: Mapped[int] = mapped_column(Integer, nullable=False)
+    bbox_w: Mapped[int] = mapped_column(Integer, nullable=False)
+    bbox_h: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )

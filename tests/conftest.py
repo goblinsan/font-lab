@@ -37,7 +37,7 @@ def override_get_db():
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
     """Create tables once for the whole test session."""
-    from app.models import FontSample  # noqa: F401
+    from app.models import FontSample, Glyph  # noqa: F401
 
     Base.metadata.create_all(bind=test_engine)
     yield
@@ -47,11 +47,12 @@ def setup_test_db():
 @pytest.fixture(autouse=True)
 def clean_db():
     """Truncate tables between tests."""
-    from app.models import FontSample
+    from app.models import FontSample, Glyph
 
     yield
     db = TestSession()
     try:
+        db.query(Glyph).delete()
         db.query(FontSample).delete()
         db.commit()
     finally:
@@ -63,10 +64,12 @@ def upload_dir():
     """Temporary directory used as the upload destination during tests."""
     with tempfile.TemporaryDirectory() as tmp:
         os.environ["UPLOAD_DIR"] = tmp
-        # Patch the routes module as well (already imported, so patch in-place)
+        # Patch the routes modules as well (already imported, so patch in-place)
         import app.routes.images as img_routes
+        import app.routes.glyphs as glyph_routes
 
         img_routes.UPLOAD_DIR = tmp
+        glyph_routes.UPLOAD_DIR = tmp
         yield tmp
 
 
@@ -93,3 +96,40 @@ def make_image_bytes() -> bytes:
         b"\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N"
         b"\x00\x00\x00\x00IEND\xaeB`\x82"
     )
+
+
+def make_blank_image_bytes(width: int = 20, height: int = 20) -> bytes:
+    """Return a valid all-white PNG image with no dark pixels (yields no glyphs)."""
+    from PIL import Image
+    import io
+
+    img = Image.new("L", (width, height), color=255)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def make_segmentable_image_bytes() -> bytes:
+    """Return a simple PNG with two clearly separated dark rectangles.
+
+    The image is 40 px wide × 20 px tall, white background with two 8×12 black
+    rectangles separated by a 6-px gap — enough for the segmentation algorithm
+    to detect two distinct glyphs.
+    """
+    from PIL import Image
+    import io
+
+    img = Image.new("L", (40, 20), color=255)  # white background
+    pixels = img.load()
+    # Left glyph: columns 2–9, rows 4–15
+    for x in range(2, 10):
+        for y in range(4, 16):
+            pixels[x, y] = 0
+    # Right glyph: columns 16–23, rows 4–15
+    for x in range(16, 24):
+        for y in range(4, 16):
+            pixels[x, y] = 0
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()

@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.database import create_tables
+from app.routes.glyphs import router as glyphs_router
 from app.routes.images import router as images_router
 
 app = FastAPI(
@@ -22,6 +23,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Register API routes
 app.include_router(images_router)
+app.include_router(glyphs_router)
 
 
 @app.get("/", include_in_schema=False)

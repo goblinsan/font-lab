@@ -169,9 +169,179 @@
       display: none;
     }
 
-    .sample-card:hover .del-btn { display: block; }
+    .sample-card .seg-btn {
+      position: absolute;
+      top: 4px; left: 4px;
+      background: rgba(26,26,46,.75);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: .7rem;
+      cursor: pointer;
+      display: none;
+    }
+
+    .sample-card:hover .del-btn,
+    .sample-card:hover .seg-btn { display: block; }
 
     .empty { color: #999; font-size: .9rem; text-align: center; padding: 2rem 0; }
+
+    /* ------------------------------------------------------------------ */
+    /* Glyph correction panel (modal overlay)                              */
+    /* ------------------------------------------------------------------ */
+
+    #correction-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 100;
+      overflow-y: auto;
+      padding: 2rem 1rem;
+    }
+
+    #correction-overlay.open { display: block; }
+
+    #correction-panel {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    #correction-panel h2 {
+      font-size: 1.1rem;
+      margin-bottom: .25rem;
+    }
+
+    #correction-panel .subtitle {
+      font-size: .8rem;
+      color: #888;
+      margin-bottom: 1.25rem;
+    }
+
+    #correction-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #555;
+      line-height: 1;
+    }
+
+    #source-img-wrap {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      margin-bottom: 1.25rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    #source-img-wrap img {
+      display: block;
+      max-width: 100%;
+    }
+
+    /* Bounding-box overlays on the source image */
+    .bbox-overlay {
+      position: absolute;
+      border: 2px solid #e74c3c;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .bbox-overlay.verified { border-color: #27ae60; }
+    .bbox-overlay:hover { border-color: #f39c12; }
+
+    #glyph-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: .75rem;
+    }
+
+    .glyph-tile {
+      background: #f8f8f8;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      padding: .5rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .glyph-tile.verified { border-color: #27ae60; }
+
+    .glyph-tile img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 3px;
+      margin-bottom: .35rem;
+      image-rendering: pixelated;
+    }
+
+    .glyph-tile input[type="text"] {
+      width: 100%;
+      padding: .25rem .35rem;
+      font-size: .85rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      text-align: center;
+      background: #fff;
+    }
+
+    .glyph-tile .tile-actions {
+      display: flex;
+      gap: .3rem;
+      margin-top: .35rem;
+    }
+
+    .glyph-tile .tile-actions button {
+      flex: 1;
+      border: none;
+      border-radius: 4px;
+      padding: .2rem 0;
+      font-size: .72rem;
+      cursor: pointer;
+    }
+
+    .btn-verify  { background: #27ae60; color: #fff; }
+    .btn-unverify { background: #bbb; color: #fff; }
+    .btn-del-g   { background: #e74c3c; color: #fff; }
+
+    #seg-status {
+      font-size: .85rem;
+      color: #555;
+      margin-bottom: 1rem;
+      min-height: 1.2em;
+    }
+
+    .seg-action-bar {
+      display: flex;
+      gap: .75rem;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .seg-action-bar button {
+      padding: .45rem .9rem;
+      border: none;
+      border-radius: 6px;
+      font-size: .85rem;
+      cursor: pointer;
+    }
+
+    #btn-run-seg   { background: #1a1a2e; color: #fff; }
+    #btn-run-seg:hover { background: #2e2e52; }
   </style>
 </head>
 <body>
@@ -220,8 +390,38 @@
     </div>
   </main>
 
+  <!-- ------------------------------------------------------------------ -->
+  <!-- Glyph correction overlay                                            -->
+  <!-- ------------------------------------------------------------------ -->
+  <div id="correction-overlay">
+    <div id="correction-panel">
+      <button id="correction-close" title="Close" onclick="closeCorrection()">×</button>
+      <h2 id="cp-title">Glyph Segmentation</h2>
+      <p class="subtitle" id="cp-subtitle"></p>
+
+      <div class="seg-action-bar">
+        <button id="btn-run-seg" onclick="runSegmentation()">⚙ Run segmentation</button>
+        <span id="seg-status"></span>
+      </div>
+
+      <!-- Source image with bbox overlays -->
+      <div id="source-img-wrap">
+        <img id="source-img" src="" alt="font sample" />
+      </div>
+
+      <!-- Glyph tiles grid -->
+      <div id="glyph-grid"></div>
+    </div>
+  </div>
+
   <script>
     const API = '/api/samples';
+    let _currentSampleId = null;
+    let _currentGlyphs  = [];
+
+    // -----------------------------------------------------------------------
+    // Gallery
+    // -----------------------------------------------------------------------
 
     async function loadSamples() {
       const name = document.getElementById('filter-name').value.trim();
@@ -248,6 +448,7 @@
         <div class="sample-card" data-id="${s.id}">
           <img src="/uploads/${s.filename}" alt="${s.original_filename}" loading="lazy"
                onerror="this.style.display='none'" />
+          <button class="seg-btn" title="Segment glyphs" aria-label="Segment glyphs" onclick="openCorrection(${s.id},'${esc(s.font_name || s.original_filename)}','${s.filename}')">✂ Glyphs</button>
           <button class="del-btn" title="Delete" onclick="deleteSample(${s.id})">✕</button>
           <div class="meta">
             <strong title="${s.font_name || s.original_filename}">${s.font_name || s.original_filename}</strong>
@@ -285,7 +486,159 @@
       loadSamples();
     }
 
-    // Serve uploaded images through static mount – needs backend route
+    // -----------------------------------------------------------------------
+    // Glyph correction panel
+    // -----------------------------------------------------------------------
+
+    async function openCorrection(sampleId, label, filename) {
+      _currentSampleId = sampleId;
+      document.getElementById('cp-title').textContent   = `Glyph Segmentation — ${label}`;
+      document.getElementById('cp-subtitle').textContent = `Sample #${sampleId}`;
+      document.getElementById('source-img').src = `/uploads/${filename}`;
+      document.getElementById('correction-overlay').classList.add('open');
+      document.getElementById('seg-status').textContent = '';
+      await loadGlyphs(sampleId);
+    }
+
+    function closeCorrection() {
+      document.getElementById('correction-overlay').classList.remove('open');
+      _currentSampleId = null;
+      _currentGlyphs   = [];
+    }
+
+    // Close on backdrop click
+    document.getElementById('correction-overlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('correction-overlay')) closeCorrection();
+    });
+
+    async function runSegmentation() {
+      if (!_currentSampleId) return;
+      const status = document.getElementById('seg-status');
+      status.textContent = 'Segmenting…';
+      try {
+        const res = await fetch(`${API}/${_currentSampleId}/segment`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Segmentation failed');
+        status.textContent = `Found ${data.length} glyph(s).`;
+        _currentGlyphs = data;
+        renderGlyphPanel(data);
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+      }
+    }
+
+    async function loadGlyphs(sampleId) {
+      const res = await fetch(`${API}/${sampleId}/glyphs`);
+      const data = await res.json();
+      _currentGlyphs = data;
+      const status = document.getElementById('seg-status');
+      if (data.length === 0) {
+        status.textContent = 'No glyphs yet — run segmentation to extract them.';
+      } else {
+        status.textContent = `${data.length} glyph(s) extracted.`;
+      }
+      renderGlyphPanel(data);
+    }
+
+    function renderGlyphPanel(glyphs) {
+      renderBboxOverlays(glyphs);
+      renderGlyphGrid(glyphs);
+    }
+
+    // Draw bounding-box overlays on the source image
+    function renderBboxOverlays(glyphs) {
+      const wrap = document.getElementById('source-img-wrap');
+      // Remove old overlays
+      wrap.querySelectorAll('.bbox-overlay').forEach(el => el.remove());
+
+      const img = document.getElementById('source-img');
+      // Natural dimensions may not be loaded yet – use onload if needed
+      function draw() {
+        const scaleX = img.clientWidth  / img.naturalWidth;
+        const scaleY = img.clientHeight / img.naturalHeight;
+        glyphs.forEach(g => {
+          const div = document.createElement('div');
+          div.className = 'bbox-overlay' + (g.verified ? ' verified' : '');
+          div.title = g.label ? `"${g.label}"` : `Glyph #${g.id}`;
+          div.style.left   = (g.bbox_x * scaleX) + 'px';
+          div.style.top    = (g.bbox_y * scaleY) + 'px';
+          div.style.width  = (g.bbox_w * scaleX) + 'px';
+          div.style.height = (g.bbox_h * scaleY) + 'px';
+          div.onclick = () => scrollToGlyphTile(g.id);
+          wrap.appendChild(div);
+        });
+      }
+      if (img.complete && img.naturalWidth) {
+        draw();
+      } else {
+        img.onload = draw;
+      }
+    }
+
+    function scrollToGlyphTile(glyphId) {
+      const tile = document.getElementById(`glyph-tile-${glyphId}`);
+      if (tile) tile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function renderGlyphGrid(glyphs) {
+      const grid = document.getElementById('glyph-grid');
+      if (!glyphs.length) {
+        grid.innerHTML = '<p class="empty" style="grid-column:1/-1">No glyphs yet.</p>';
+        return;
+      }
+      grid.innerHTML = glyphs.map(g => `
+        <div class="glyph-tile${g.verified ? ' verified' : ''}" id="glyph-tile-${g.id}">
+          <img src="/uploads/glyphs/${g.filename}" alt="glyph ${g.id}"
+               onerror="this.style.opacity='.3'" />
+          <input type="text" value="${esc(g.label || '')}" placeholder="label"
+                 maxlength="4"
+                 onchange="saveLabel(${g.id}, this.value)" />
+          <div class="tile-actions">
+            ${g.verified
+              ? `<button class="btn-unverify" onclick="setVerified(${g.id}, false)">✕ unverify</button>`
+              : `<button class="btn-verify"   onclick="setVerified(${g.id}, true)">✓ verify</button>`}
+            <button class="btn-del-g" aria-label="Delete glyph" onclick="deleteGlyph(${g.id})">🗑</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function saveLabel(glyphId, label) {
+      await fetch(`/api/glyphs/${glyphId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: label || null }),
+      });
+      // Update local state
+      const g = _currentGlyphs.find(x => x.id === glyphId);
+      if (g) g.label = label || null;
+    }
+
+    async function setVerified(glyphId, verified) {
+      const res = await fetch(`/api/glyphs/${glyphId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verified }),
+      });
+      const updated = await res.json();
+      const idx = _currentGlyphs.findIndex(x => x.id === glyphId);
+      if (idx !== -1) _currentGlyphs[idx] = updated;
+      renderGlyphPanel(_currentGlyphs);
+    }
+
+    async function deleteGlyph(glyphId) {
+      if (!confirm('Delete this glyph?')) return;
+      await fetch(`/api/glyphs/${glyphId}`, { method: 'DELETE' });
+      _currentGlyphs = _currentGlyphs.filter(g => g.id !== glyphId);
+      document.getElementById('seg-status').textContent = `${_currentGlyphs.length} glyph(s) extracted.`;
+      renderGlyphPanel(_currentGlyphs);
+    }
+
+    // Escape HTML special chars for inline attribute values
+    function esc(str) {
+      return (str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // Initial load
     loadSamples();
   </script>
 </body>
