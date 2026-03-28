@@ -11,6 +11,7 @@ from app.routes.images import router as images_router
 from app.routes.integrations import router as integrations_router
 from app.routes.reconstruction import router as reconstruction_router
 from app.routes.taxonomy import router as taxonomy_router
+from app.routes.editor import router as editor_router
 
 app = FastAPI(
     title="font-lab",
@@ -32,6 +33,7 @@ app.include_router(reconstruction_router)
 app.include_router(taxonomy_router)
 app.include_router(catalog_router)
 app.include_router(integrations_router)
+app.include_router(editor_router)
 
 
 @app.get("/", include_in_schema=False)

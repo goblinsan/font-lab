@@ -73,6 +73,9 @@ def upload_dir():
         import app.routes.reconstruction as reconstruction_routes
 
         reconstruction_routes.UPLOAD_DIR = tmp
+        import app.routes.editor as editor_routes
+
+        editor_routes.UPLOAD_DIR = tmp
         yield tmp
 
 
