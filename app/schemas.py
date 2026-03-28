@@ -60,6 +60,8 @@ class GlyphResponse(BaseModel):
     bbox_w: int
     bbox_h: int
     label: str | None = None
+    advance_width: int | None = None
+    left_bearing: int | None = None
     verified: bool = False
     synthesized: bool = False
     created_at: datetime
@@ -73,6 +75,8 @@ class GlyphUpdate(BaseModel):
     bbox_y: int | None = None
     bbox_w: int | None = None
     bbox_h: int | None = None
+    advance_width: int | None = None
+    left_bearing: int | None = None
     verified: bool | None = None
 
 
@@ -102,3 +106,18 @@ class CatalogEntryResponse(FontSampleResponse):
 
     preview_url: str
     glyph_count: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Editor / QA schemas
+# ---------------------------------------------------------------------------
+
+class GlyphCompareEntry(BaseModel):
+    """Comparison entry pairing a glyph's source image with its outline URL."""
+
+    id: int
+    label: str | None = None
+    source_url: str
+    outline_url: str
+    verified: bool = False
+    synthesized: bool = False

@@ -58,6 +58,8 @@ class Glyph(Base):
     bbox_w: Mapped[int] = mapped_column(Integer, nullable=False)
     bbox_h: Mapped[int] = mapped_column(Integer, nullable=False)
     label: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    advance_width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    left_bearing: Mapped[int | None] = mapped_column(Integer, nullable=True)
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     synthesized: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

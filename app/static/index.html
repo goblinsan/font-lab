@@ -332,9 +332,153 @@
 
     #sp-open-seg-btn:hover { background: #2e2e52; }
 
+    #sp-action-bar {
+      display: flex;
+      gap: .6rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+
+    #sp-action-bar button {
+      padding: .45rem .9rem;
+      border: none;
+      border-radius: 6px;
+      font-size: .85rem;
+      cursor: pointer;
+      background: #1a1a2e;
+      color: #fff;
+    }
+
+    #sp-action-bar button:hover { background: #2e2e52; }
+
     /* ------------------------------------------------------------------ */
-    /* Glyph correction panel (modal overlay)                              */
+    /* Compare overlay (Issue #19)                                         */
     /* ------------------------------------------------------------------ */
+
+    #compare-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 110;
+      overflow-y: auto;
+      padding: 2rem 1rem;
+    }
+
+    #compare-overlay.open { display: block; }
+
+    #compare-panel {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.75rem;
+      position: relative;
+    }
+
+    #compare-panel h2 { font-size: 1.1rem; margin-bottom: .2rem; }
+
+    #compare-panel .subtitle { font-size: .8rem; color: #888; margin-bottom: 1.25rem; }
+
+    #compare-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #555;
+      line-height: 1;
+    }
+
+    #compare-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+
+    .cmp-tile {
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: .6rem;
+      text-align: center;
+    }
+
+    .cmp-tile.verified { border-color: #27ae60; }
+
+    .cmp-row {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: .4rem;
+    }
+
+    .cmp-half {
+      flex: 1;
+      background: #fff;
+      border-radius: 4px;
+      border: 1px solid #eee;
+      overflow: hidden;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cmp-half img, .cmp-half object {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+
+    .cmp-col-labels {
+      display: flex;
+      gap: .5rem;
+      font-size: .65rem;
+      color: #999;
+      margin-bottom: .4rem;
+    }
+
+    .cmp-col-labels span { flex: 1; text-align: center; }
+
+    .cmp-label {
+      font-size: .8rem;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .cmp-empty { color: #999; font-size: .9rem; text-align: center; padding: 2rem 0; }
+
+    /* ------------------------------------------------------------------ */
+    /* Spacing controls in glyph tile (Issue #20)                         */
+    /* ------------------------------------------------------------------ */
+
+    .spacing-row {
+      display: flex;
+      gap: .3rem;
+      margin-top: .3rem;
+    }
+
+    .spacing-row label {
+      font-size: .65rem;
+      color: #888;
+      margin: 0 0 .1rem;
+    }
+
+    .spacing-field {
+      flex: 1;
+    }
+
+    .spacing-field input[type="number"] {
+      width: 100%;
+      padding: .2rem .3rem;
+      font-size: .78rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      text-align: center;
+      background: #fff;
+    }
 
     #correction-overlay {
       display: none;
@@ -564,7 +708,11 @@
       <h2 id="sp-title"></h2>
       <div class="sp-meta" id="sp-meta"></div>
       <img id="specimen-img" src="" alt="font specimen" />
-      <button id="sp-open-seg-btn" onclick="openCorrectionFromSpecimen()">✂ Edit glyphs</button>
+      <div id="sp-action-bar">
+        <button onclick="openCorrectionFromSpecimen()">✂ Edit glyphs</button>
+        <button onclick="openCompareFromSpecimen()">⊞ Compare glyphs</button>
+        <button onclick="openPrintPreview()">🖨 Print preview</button>
+      </div>
       <div id="specimen-glyphs-section">
         <h3 id="sp-glyph-heading"></h3>
         <div id="specimen-glyph-grid"></div>
@@ -593,6 +741,18 @@
 
       <!-- Glyph tiles grid -->
       <div id="glyph-grid"></div>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------------------ -->
+  <!-- Compare overlay (Issue #19)                                         -->
+  <!-- ------------------------------------------------------------------ -->
+  <div id="compare-overlay">
+    <div id="compare-panel">
+      <button id="compare-close" title="Close" onclick="closeCompare()">×</button>
+      <h2 id="cmp-title">Comparison View</h2>
+      <p class="subtitle" id="cmp-subtitle">Source crop vs. generated vector outline</p>
+      <div id="compare-grid"></div>
     </div>
   </div>
 
@@ -892,6 +1052,20 @@
           <input type="text" value="${esc(g.label || '')}" placeholder="label"
                  maxlength="4"
                  onchange="saveLabel(${g.id}, this.value)" />
+          <div class="spacing-row">
+            <div class="spacing-field">
+              <label>Adv. width</label>
+              <input type="number" min="0" max="2000" placeholder="auto"
+                     value="${g.advance_width != null ? g.advance_width : ''}"
+                     onchange="saveSpacing(${g.id}, 'advance_width', this.value)" />
+            </div>
+            <div class="spacing-field">
+              <label>L. bearing</label>
+              <input type="number" min="0" max="500" placeholder="auto"
+                     value="${g.left_bearing != null ? g.left_bearing : ''}"
+                     onchange="saveSpacing(${g.id}, 'left_bearing', this.value)" />
+            </div>
+          </div>
           <div class="tile-actions">
             ${g.verified
               ? `<button class="btn-unverify" onclick="setVerified(${g.id}, false)">✕ unverify</button>`
@@ -912,6 +1086,17 @@
       if (g) g.label = label || null;
     }
 
+    async function saveSpacing(glyphId, field, rawValue) {
+      const value = rawValue === '' ? null : parseInt(rawValue, 10);
+      await fetch(`/api/glyphs/${glyphId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+      const g = _currentGlyphs.find(x => x.id === glyphId);
+      if (g) g[field] = value;
+    }
+
     async function setVerified(glyphId, verified) {
       const res = await fetch(`/api/glyphs/${glyphId}`, {
         method: 'PATCH',
@@ -930,6 +1115,74 @@
       _currentGlyphs = _currentGlyphs.filter(g => g.id !== glyphId);
       document.getElementById('seg-status').textContent = `${_currentGlyphs.length} glyph(s) extracted.`;
       renderGlyphPanel(_currentGlyphs);
+    }
+
+    // -----------------------------------------------------------------------
+    // Compare view (Issue #19)
+    // -----------------------------------------------------------------------
+
+    async function openCompareFromSpecimen() {
+      if (!_specimenSample) return;
+      closeSpecimen();
+      await openCompare(_specimenSample.id, _specimenSample.font_name || _specimenSample.original_filename);
+    }
+
+    async function openCompare(sampleId, label) {
+      document.getElementById('cmp-title').textContent = `Compare — ${label}`;
+      document.getElementById('compare-overlay').classList.add('open');
+
+      const grid = document.getElementById('compare-grid');
+      grid.innerHTML = '<p class="cmp-empty">Loading…</p>';
+
+      try {
+        const res = await fetch(`${API}/${sampleId}/compare`);
+        const entries = await res.json();
+
+        if (!entries.length) {
+          grid.innerHTML = '<p class="cmp-empty">No glyphs extracted yet.</p>';
+          return;
+        }
+
+        grid.innerHTML = entries.map(e => `
+          <div class="cmp-tile${e.verified ? ' verified' : ''}">
+            <div class="cmp-col-labels">
+              <span>Source</span><span>Outline</span>
+            </div>
+            <div class="cmp-row">
+              <div class="cmp-half">
+                <img src="${e.source_url}" alt="source ${e.id}"
+                     onerror="this.style.opacity='.3'" />
+              </div>
+              <div class="cmp-half">
+                <img src="${e.outline_url}" alt="outline ${e.id}"
+                     onerror="this.style.opacity='.3'" />
+              </div>
+            </div>
+            <div class="cmp-label">${esc(e.label || '?')}${e.synthesized ? ' <span title="synthesised" style="color:#888;font-size:.65rem">~</span>' : ''}</div>
+          </div>`).join('');
+      } catch (err) {
+        grid.innerHTML = `<p class="cmp-empty">Error: ${err.message}</p>`;
+      }
+    }
+
+    function closeCompare() {
+      document.getElementById('compare-overlay').classList.remove('open');
+    }
+
+    document.getElementById('compare-overlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('compare-overlay')) closeCompare();
+    });
+
+    // -----------------------------------------------------------------------
+    // Print preview (Issue #21)
+    // -----------------------------------------------------------------------
+
+    function openPrintPreview() {
+      if (!_specimenSample) return;
+      const text = prompt('Preview text:', 'The quick brown fox');
+      if (text === null) return;   // cancelled
+      const url = `${API}/${_specimenSample.id}/print-preview?text=${encodeURIComponent(text || 'The quick brown fox')}`;
+      window.open(url, '_blank');
     }
 
     // Escape HTML special chars for inline attribute values

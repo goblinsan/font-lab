@@ -51,6 +51,8 @@ def _to_response(glyph: Glyph) -> GlyphResponse:
         bbox_w=glyph.bbox_w,
         bbox_h=glyph.bbox_h,
         label=glyph.label,
+        advance_width=glyph.advance_width,
+        left_bearing=glyph.left_bearing,
         verified=glyph.verified,
         synthesized=glyph.synthesized,
         created_at=glyph.created_at,

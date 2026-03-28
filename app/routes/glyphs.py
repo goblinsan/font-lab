@@ -33,6 +33,8 @@ def _to_response(glyph: Glyph) -> GlyphResponse:
         bbox_w=glyph.bbox_w,
         bbox_h=glyph.bbox_h,
         label=glyph.label,
+        advance_width=glyph.advance_width,
+        left_bearing=glyph.left_bearing,
         verified=glyph.verified,
         synthesized=glyph.synthesized,
         created_at=glyph.created_at,
@@ -156,6 +158,10 @@ def update_glyph(glyph_id: int, payload: GlyphUpdate, db: Session = Depends(get_
         glyph.bbox_w = payload.bbox_w
     if payload.bbox_h is not None:
         glyph.bbox_h = payload.bbox_h
+    if "advance_width" in payload.model_fields_set:
+        glyph.advance_width = payload.advance_width
+    if "left_bearing" in payload.model_fields_set:
+        glyph.left_bearing = payload.left_bearing
     if payload.verified is not None:
         glyph.verified = payload.verified
 
