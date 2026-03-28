@@ -30,6 +30,6 @@ def get_db():
 
 def create_tables():
     """Create all database tables."""
-    from app.models import FontSample  # noqa: F401 – ensure model is registered
+    from app.models import FontSample, Glyph  # noqa: F401 – ensure models are registered
 
     Base.metadata.create_all(bind=engine)
