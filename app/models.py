@@ -57,6 +57,7 @@ class Glyph(Base):
     bbox_h: Mapped[int] = mapped_column(Integer, nullable=False)
     label: Mapped[str | None] = mapped_column(String(10), nullable=True)
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    synthesized: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

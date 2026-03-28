@@ -34,6 +34,7 @@ def _to_response(glyph: Glyph) -> GlyphResponse:
         bbox_h=glyph.bbox_h,
         label=glyph.label,
         verified=glyph.verified,
+        synthesized=glyph.synthesized,
         created_at=glyph.created_at,
     )
 

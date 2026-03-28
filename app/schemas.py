@@ -1,5 +1,6 @@
 """Pydantic schemas for request/response serialisation."""
 
+import string
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -56,6 +57,7 @@ class GlyphResponse(BaseModel):
     bbox_h: int
     label: str | None = None
     verified: bool = False
+    synthesized: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -68,3 +70,20 @@ class GlyphUpdate(BaseModel):
     bbox_w: int | None = None
     bbox_h: int | None = None
     verified: bool | None = None
+
+
+# ---------------------------------------------------------------------------
+# Reconstruction / export schemas
+# ---------------------------------------------------------------------------
+
+_DEFAULT_CHARSET = string.ascii_letters + string.digits
+
+
+class ReconstructRequest(BaseModel):
+    charset: str = _DEFAULT_CHARSET
+
+
+class ExportRequest(BaseModel):
+    format: str = "ttf"
+    font_name: str = "ReconstructedFont"
+    style_name: str = "Regular"
