@@ -1,0 +1,95 @@
+"""Pytest configuration and shared fixtures for font-lab tests."""
+
+import os
+import tempfile
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.database import Base, get_db
+from app.main import app
+
+# ---------------------------------------------------------------------------
+# In-memory SQLite database for tests (single shared connection via StaticPool)
+# ---------------------------------------------------------------------------
+
+TEST_DB_URL = "sqlite://"
+
+test_engine = create_engine(
+    TEST_DB_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestSession = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+
+def override_get_db():
+    db = TestSession()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_db():
+    """Create tables once for the whole test session."""
+    from app.models import FontSample  # noqa: F401
+
+    Base.metadata.create_all(bind=test_engine)
+    yield
+    Base.metadata.drop_all(bind=test_engine)
+
+
+@pytest.fixture(autouse=True)
+def clean_db():
+    """Truncate tables between tests."""
+    from app.models import FontSample
+
+    yield
+    db = TestSession()
+    try:
+        db.query(FontSample).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+@pytest.fixture(scope="session")
+def upload_dir():
+    """Temporary directory used as the upload destination during tests."""
+    with tempfile.TemporaryDirectory() as tmp:
+        os.environ["UPLOAD_DIR"] = tmp
+        # Patch the routes module as well (already imported, so patch in-place)
+        import app.routes.images as img_routes
+
+        img_routes.UPLOAD_DIR = tmp
+        yield tmp
+
+
+@pytest.fixture(scope="session")
+def client(upload_dir, setup_test_db):
+    """FastAPI TestClient with overridden DB and upload directory."""
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def make_image_bytes() -> bytes:
+    """Return a minimal valid PNG byte string (1×1 red pixel)."""
+    # A real 1×1 red PNG
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde"
+        b"\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>font-lab</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f4f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    header h1 { font-size: 1.4rem; letter-spacing: 0.05em; }
+
+    main {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      padding: 1.5rem;
+    }
+
+    .card h2 { font-size: 1rem; margin-bottom: 1rem; color: #333; }
+
+    label { display: block; font-size: .85rem; color: #555; margin-bottom: .25rem; margin-top: .75rem; }
+
+    input[type="text"], input[type="file"], textarea, select {
+      width: 100%;
+      padding: .5rem .75rem;
+      border: 1px solid #d0cfc8;
+      border-radius: 6px;
+      font-size: .9rem;
+      background: #fafaf8;
+    }
+
+    input[type="file"] { padding: .35rem; }
+
+    textarea { min-height: 70px; resize: vertical; }
+
+    button[type="submit"] {
+      display: block;
+      width: 100%;
+      margin-top: 1.25rem;
+      padding: .65rem;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: .95rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    button[type="submit"]:hover { background: #2e2e52; }
+
+    #msg {
+      margin-top: .75rem;
+      font-size: .85rem;
+      min-height: 1.2em;
+    }
+
+    #msg.ok  { color: #2a7a3b; }
+    #msg.err { color: #c0392b; }
+
+    /* Gallery */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin-bottom: 1rem;
+    }
+
+    .filters input {
+      flex: 1 1 140px;
+      padding: .45rem .7rem;
+      border: 1px solid #d0cfc8;
+      border-radius: 6px;
+      font-size: .85rem;
+      background: #fafaf8;
+    }
+
+    .filters button {
+      padding: .45rem .9rem;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: .85rem;
+      cursor: pointer;
+    }
+
+    #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .sample-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .sample-card img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      display: block;
+      background: #eee;
+    }
+
+    .sample-card .meta {
+      padding: .6rem .75rem;
+    }
+
+    .sample-card .meta strong { font-size: .85rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sample-card .meta span  { font-size: .75rem; color: #777; }
+
+    .sample-card .tag {
+      display: inline-block;
+      background: #e8e7f5;
+      color: #3a3a7a;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: .7rem;
+      margin: 2px 2px 0 0;
+    }
+
+    .sample-card .del-btn {
+      position: absolute;
+      top: 4px; right: 4px;
+      background: rgba(0,0,0,.45);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      width: 22px; height: 22px;
+      font-size: .75rem;
+      cursor: pointer;
+      line-height: 22px;
+      text-align: center;
+      display: none;
+    }
+
+    .sample-card:hover .del-btn { display: block; }
+
+    .empty { color: #999; font-size: .9rem; text-align: center; padding: 2rem 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h8m-8 4h6"/></svg>
+    <h1>font-lab</h1>
+  </header>
+
+  <main>
+    <!-- Upload form -->
+    <div class="card">
+      <h2>Upload font sample</h2>
+      <form id="upload-form" enctype="multipart/form-data">
+        <label for="file">Image *</label>
+        <input type="file" id="file" name="file" accept="image/*" required />
+
+        <label for="font_name">Font name</label>
+        <input type="text" id="font_name" name="font_name" placeholder="e.g. Helvetica" />
+
+        <label for="font_category">Category</label>
+        <input type="text" id="font_category" name="font_category" placeholder="e.g. sans-serif" />
+
+        <label for="tags">Tags <small>(comma-separated)</small></label>
+        <input type="text" id="tags" name="tags" placeholder="e.g. bold, display, vintage" />
+
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" placeholder="Any additional observations…"></textarea>
+
+        <button type="submit">Upload</button>
+        <p id="msg"></p>
+      </form>
+    </div>
+
+    <!-- Gallery -->
+    <div>
+      <div class="card" style="margin-bottom:1rem">
+        <h2>Filter samples</h2>
+        <div class="filters">
+          <input type="text" id="filter-name" placeholder="Font name…" />
+          <input type="text" id="filter-cat" placeholder="Category…" />
+          <input type="text" id="filter-tag" placeholder="Tag…" />
+          <button onclick="loadSamples()">Search</button>
+        </div>
+      </div>
+      <div id="gallery"></div>
+    </div>
+  </main>
+
+  <script>
+    const API = '/api/samples';
+
+    async function loadSamples() {
+      const name = document.getElementById('filter-name').value.trim();
+      const cat  = document.getElementById('filter-cat').value.trim();
+      const tag  = document.getElementById('filter-tag').value.trim();
+
+      const params = new URLSearchParams();
+      if (name) params.set('font_name', name);
+      if (cat)  params.set('font_category', cat);
+      if (tag)  params.set('tag', tag);
+
+      const res  = await fetch(`${API}/?${params}`);
+      const data = await res.json();
+      renderGallery(data);
+    }
+
+    function renderGallery(samples) {
+      const gallery = document.getElementById('gallery');
+      if (!samples.length) {
+        gallery.innerHTML = '<p class="empty">No samples found.</p>';
+        return;
+      }
+      gallery.innerHTML = samples.map(s => `
+        <div class="sample-card" data-id="${s.id}">
+          <img src="/uploads/${s.filename}" alt="${s.original_filename}" loading="lazy"
+               onerror="this.style.display='none'" />
+          <button class="del-btn" title="Delete" onclick="deleteSample(${s.id})">✕</button>
+          <div class="meta">
+            <strong title="${s.font_name || s.original_filename}">${s.font_name || s.original_filename}</strong>
+            <span>${s.font_category || ''}</span>
+            <div>${(s.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}</div>
+            ${s.notes ? `<span style="font-size:.75rem;color:#555">${s.notes}</span>` : ''}
+          </div>
+        </div>`).join('');
+    }
+
+    document.getElementById('upload-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const msg  = document.getElementById('msg');
+      const form = e.target;
+      msg.textContent = 'Uploading…';
+      msg.className = '';
+
+      try {
+        const res  = await fetch(`${API}/`, { method: 'POST', body: new FormData(form) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Upload failed');
+        msg.textContent = `Uploaded: ${data.original_filename}`;
+        msg.className = 'ok';
+        form.reset();
+        loadSamples();
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.className = 'err';
+      }
+    });
+
+    async function deleteSample(id) {
+      if (!confirm('Delete this sample?')) return;
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      loadSamples();
+    }
+
+    // Serve uploaded images through static mount – needs backend route
+    loadSamples();
+  </script>
+</body>
+</html>
