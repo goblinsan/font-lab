@@ -10,6 +10,7 @@ class FontSampleBase(BaseModel):
     font_name: str | None = None
     font_category: str | None = None
     style: str | None = None
+    genre: str | None = None
     theme: str | None = None
     era: str | None = None
     provenance: str | None = None
@@ -18,12 +19,30 @@ class FontSampleBase(BaseModel):
     source: str | None = None
     restoration_notes: str | None = None
     tags: list[str] = []
+    # Extended taxonomy fields (issues #34, #35, #37, #38)
+    origin_context: str | None = None
+    source_type: str | None = None
+    restoration_status: str | None = None
+    rights_status: str | None = None
+    rights_notes: str | None = None
+    completeness: float | None = Field(default=None, ge=0.0, le=1.0)
+    moods: list[str] = []
+    use_cases: list[str] = []
+    construction_traits: list[str] = []
+    visual_traits: list[str] = []
 
     @field_validator("tags", mode="before")
     @classmethod
     def parse_tags(cls, v):
         if isinstance(v, str):
             # Accept comma-separated string from multipart forms
+            return [t.strip() for t in v.split(",") if t.strip()]
+        return v or []
+
+    @field_validator("moods", "use_cases", "construction_traits", "visual_traits", mode="before")
+    @classmethod
+    def parse_list_fields(cls, v):
+        if isinstance(v, str):
             return [t.strip() for t in v.split(",") if t.strip()]
         return v or []
 
@@ -36,6 +55,7 @@ class FontSampleUpdate(BaseModel):
     font_name: str | None = None
     font_category: str | None = None
     style: str | None = None
+    genre: str | None = None
     theme: str | None = None
     era: str | None = None
     provenance: str | None = None
@@ -44,6 +64,17 @@ class FontSampleUpdate(BaseModel):
     source: str | None = None
     restoration_notes: str | None = None
     tags: list[str] | None = None
+    # Extended taxonomy fields
+    origin_context: str | None = None
+    source_type: str | None = None
+    restoration_status: str | None = None
+    rights_status: str | None = None
+    rights_notes: str | None = None
+    completeness: float | None = Field(default=None, ge=0.0, le=1.0)
+    moods: list[str] | None = None
+    use_cases: list[str] | None = None
+    construction_traits: list[str] | None = None
+    visual_traits: list[str] | None = None
 
 
 class FontSampleResponse(FontSampleBase):
@@ -161,9 +192,12 @@ class SimilarFontEntry(BaseModel):
     font_name: str | None = None
     font_category: str | None = None
     style: str | None = None
+    genre: str | None = None
     theme: str | None = None
     era: str | None = None
     tags: list[str] = []
+    moods: list[str] = []
+    visual_traits: list[str] = []
     preview_url: str
     similarity_score: float = Field(ge=0.0, le=1.0)
 

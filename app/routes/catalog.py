@@ -43,6 +43,7 @@ def _to_catalog_entry(sample: FontSample, glyph_count: int) -> CatalogEntryRespo
         font_name=sample.font_name,
         font_category=sample.font_category,
         style=sample.style,
+        genre=sample.genre,
         theme=sample.theme,
         notes=sample.notes,
         source=sample.source,
@@ -53,6 +54,16 @@ def _to_catalog_entry(sample: FontSample, glyph_count: int) -> CatalogEntryRespo
         uploaded_at=sample.uploaded_at,
         preview_url=_preview_url(sample.filename),
         glyph_count=glyph_count,
+        origin_context=sample.origin_context,
+        source_type=sample.source_type,
+        restoration_status=sample.restoration_status,
+        rights_status=sample.rights_status,
+        rights_notes=sample.rights_notes,
+        completeness=sample.completeness,
+        moods=sample.moods,
+        use_cases=sample.use_cases,
+        construction_traits=sample.construction_traits,
+        visual_traits=sample.visual_traits,
     )
 
 
