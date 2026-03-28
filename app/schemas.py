@@ -91,3 +91,14 @@ class ExportRequest(BaseModel):
     format: str = "ttf"
     font_name: str = "ReconstructedFont"
     style_name: str = "Regular"
+
+
+# ---------------------------------------------------------------------------
+# Catalog schemas
+# ---------------------------------------------------------------------------
+
+class CatalogEntryResponse(FontSampleResponse):
+    """FontSampleResponse extended with a preview URL and glyph count."""
+
+    preview_url: str
+    glyph_count: int = 0
