@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, field_validator
 class FontSampleBase(BaseModel):
     font_name: str | None = None
     font_category: str | None = None
+    style: str | None = None
+    theme: str | None = None
     notes: str | None = None
     tags: list[str] = []
 
@@ -28,6 +30,8 @@ class FontSampleCreate(FontSampleBase):
 class FontSampleUpdate(BaseModel):
     font_name: str | None = None
     font_category: str | None = None
+    style: str | None = None
+    theme: str | None = None
     notes: str | None = None
     tags: list[str] | None = None
 

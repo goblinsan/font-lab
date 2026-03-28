@@ -90,22 +90,27 @@
 
     /* Gallery */
     .filters {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: .5rem;
       margin-bottom: 1rem;
     }
 
-    .filters input {
-      flex: 1 1 140px;
+    .filters input, .filters select {
       padding: .45rem .7rem;
       border: 1px solid #d0cfc8;
       border-radius: 6px;
       font-size: .85rem;
       background: #fafaf8;
+      width: 100%;
+    }
+
+    .filters .filter-row-full {
+      grid-column: 1 / -1;
     }
 
     .filters button {
+      grid-column: 1 / -1;
       padding: .45rem .9rem;
       background: #1a1a2e;
       color: #fff;
@@ -114,6 +119,8 @@
       font-size: .85rem;
       cursor: pointer;
     }
+
+    .filters button:hover { background: #2e2e52; }
 
     #gallery {
       display: grid;
@@ -127,6 +134,13 @@
       box-shadow: 0 1px 4px rgba(0,0,0,.07);
       overflow: hidden;
       position: relative;
+      cursor: pointer;
+      transition: box-shadow .15s, transform .12s;
+    }
+
+    .sample-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,.13);
+      transform: translateY(-2px);
     }
 
     .sample-card img {
@@ -143,6 +157,27 @@
 
     .sample-card .meta strong { font-size: .85rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sample-card .meta span  { font-size: .75rem; color: #777; }
+
+    .sample-card .taxonomy-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 4px;
+    }
+
+    .badge {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: .68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    .badge-style { background: #ddeeff; color: #1a4a8a; }
+    .badge-theme { background: #ffeedd; color: #8a4a1a; }
+    .badge-cat   { background: #eeffdd; color: #2a6a1a; }
 
     .sample-card .tag {
       display: inline-block;
@@ -186,6 +221,116 @@
     .sample-card:hover .seg-btn { display: block; }
 
     .empty { color: #999; font-size: .9rem; text-align: center; padding: 2rem 0; }
+
+    /* ------------------------------------------------------------------ */
+    /* Specimen view overlay                                               */
+    /* ------------------------------------------------------------------ */
+
+    #specimen-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 90;
+      overflow-y: auto;
+      padding: 2rem 1rem;
+    }
+
+    #specimen-overlay.open { display: block; }
+
+    #specimen-panel {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 1.75rem;
+      position: relative;
+    }
+
+    #specimen-panel h2 {
+      font-size: 1.3rem;
+      margin-bottom: .2rem;
+    }
+
+    #specimen-panel .sp-meta {
+      font-size: .82rem;
+      color: #666;
+      margin-bottom: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+      align-items: center;
+    }
+
+    #specimen-img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 1.25rem;
+    }
+
+    #specimen-glyphs-section h3 {
+      font-size: .9rem;
+      color: #555;
+      margin-bottom: .75rem;
+    }
+
+    #specimen-glyph-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: .5rem;
+    }
+
+    .sp-glyph-tile {
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: .4rem;
+      text-align: center;
+    }
+
+    .sp-glyph-tile.verified { border-color: #27ae60; }
+
+    .sp-glyph-tile img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 3px;
+      margin-bottom: .25rem;
+      image-rendering: pixelated;
+    }
+
+    .sp-glyph-tile .sp-label {
+      font-size: .75rem;
+      color: #444;
+      font-weight: 600;
+    }
+
+    #specimen-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #555;
+      line-height: 1;
+    }
+
+    #sp-open-seg-btn {
+      padding: .45rem .9rem;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: .85rem;
+      cursor: pointer;
+      margin-bottom: 1.25rem;
+    }
+
+    #sp-open-seg-btn:hover { background: #2e2e52; }
 
     /* ------------------------------------------------------------------ */
     /* Glyph correction panel (modal overlay)                              */
@@ -362,7 +507,19 @@
         <input type="text" id="font_name" name="font_name" placeholder="e.g. Helvetica" />
 
         <label for="font_category">Category</label>
-        <input type="text" id="font_category" name="font_category" placeholder="e.g. sans-serif" />
+        <select id="font_category" name="font_category">
+          <option value="">— select category —</option>
+        </select>
+
+        <label for="style">Style</label>
+        <select id="style" name="style">
+          <option value="">— select style —</option>
+        </select>
+
+        <label for="theme">Theme</label>
+        <select id="theme" name="theme">
+          <option value="">— select theme —</option>
+        </select>
 
         <label for="tags">Tags <small>(comma-separated)</small></label>
         <input type="text" id="tags" name="tags" placeholder="e.g. bold, display, vintage" />
@@ -378,17 +535,42 @@
     <!-- Gallery -->
     <div>
       <div class="card" style="margin-bottom:1rem">
-        <h2>Filter samples</h2>
+        <h2>Browse fonts</h2>
         <div class="filters">
           <input type="text" id="filter-name" placeholder="Font name…" />
-          <input type="text" id="filter-cat" placeholder="Category…" />
           <input type="text" id="filter-tag" placeholder="Tag…" />
+          <select id="filter-cat">
+            <option value="">All categories</option>
+          </select>
+          <select id="filter-style">
+            <option value="">All styles</option>
+          </select>
+          <select id="filter-theme" class="filter-row-full">
+            <option value="">All themes</option>
+          </select>
           <button onclick="loadSamples()">Search</button>
         </div>
       </div>
       <div id="gallery"></div>
     </div>
   </main>
+
+  <!-- ------------------------------------------------------------------ -->
+  <!-- Specimen view overlay (Issues #12 & #13)                           -->
+  <!-- ------------------------------------------------------------------ -->
+  <div id="specimen-overlay">
+    <div id="specimen-panel">
+      <button id="specimen-close" title="Close" onclick="closeSpecimen()">×</button>
+      <h2 id="sp-title"></h2>
+      <div class="sp-meta" id="sp-meta"></div>
+      <img id="specimen-img" src="" alt="font specimen" />
+      <button id="sp-open-seg-btn" onclick="openCorrectionFromSpecimen()">✂ Edit glyphs</button>
+      <div id="specimen-glyphs-section">
+        <h3 id="sp-glyph-heading"></h3>
+        <div id="specimen-glyph-grid"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- ------------------------------------------------------------------ -->
   <!-- Glyph correction overlay                                            -->
@@ -418,20 +600,54 @@
     const API = '/api/samples';
     let _currentSampleId = null;
     let _currentGlyphs  = [];
+    let _specimenSample = null;
+
+    // -----------------------------------------------------------------------
+    // Taxonomy – populate dropdowns
+    // -----------------------------------------------------------------------
+
+    async function loadTaxonomy() {
+      try {
+        const res = await fetch('/api/taxonomy/');
+        const tax = await res.json();
+        populateSelect('font_category', tax.categories);
+        populateSelect('style',         tax.styles);
+        populateSelect('theme',         tax.themes);
+        populateSelect('filter-cat',    tax.categories, true);
+        populateSelect('filter-style',  tax.styles,     true);
+        populateSelect('filter-theme',  tax.themes,     true);
+      } catch (_) { /* ignore – selects remain empty */ }
+    }
+
+    function populateSelect(id, values, withAllOption) {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      // Keep the first placeholder option, then append taxonomy values
+      values.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        sel.appendChild(opt);
+      });
+    }
 
     // -----------------------------------------------------------------------
     // Gallery
     // -----------------------------------------------------------------------
 
     async function loadSamples() {
-      const name = document.getElementById('filter-name').value.trim();
-      const cat  = document.getElementById('filter-cat').value.trim();
-      const tag  = document.getElementById('filter-tag').value.trim();
+      const name  = document.getElementById('filter-name').value.trim();
+      const cat   = document.getElementById('filter-cat').value;
+      const style = document.getElementById('filter-style').value;
+      const theme = document.getElementById('filter-theme').value;
+      const tag   = document.getElementById('filter-tag').value.trim();
 
       const params = new URLSearchParams();
-      if (name) params.set('font_name', name);
-      if (cat)  params.set('font_category', cat);
-      if (tag)  params.set('tag', tag);
+      if (name)  params.set('font_name', name);
+      if (cat)   params.set('font_category', cat);
+      if (style) params.set('style', style);
+      if (theme) params.set('theme', theme);
+      if (tag)   params.set('tag', tag);
 
       const res  = await fetch(`${API}/?${params}`);
       const data = await res.json();
@@ -445,14 +661,19 @@
         return;
       }
       gallery.innerHTML = samples.map(s => `
-        <div class="sample-card" data-id="${s.id}">
+        <div class="sample-card" data-id="${s.id}" onclick="openSpecimen(${s.id})">
           <img src="/uploads/${s.filename}" alt="${s.original_filename}" loading="lazy"
                onerror="this.style.display='none'" />
-          <button class="seg-btn" title="Segment glyphs" aria-label="Segment glyphs" onclick="openCorrection(${s.id},'${esc(s.font_name || s.original_filename)}','${s.filename}')">✂ Glyphs</button>
-          <button class="del-btn" title="Delete" onclick="deleteSample(${s.id})">✕</button>
+          <button class="seg-btn" title="Segment glyphs" aria-label="Segment glyphs"
+                  onclick="event.stopPropagation();openCorrection(${s.id},'${esc(s.font_name || s.original_filename)}','${s.filename}')">✂ Glyphs</button>
+          <button class="del-btn" title="Delete" onclick="event.stopPropagation();deleteSample(${s.id})">✕</button>
           <div class="meta">
             <strong title="${s.font_name || s.original_filename}">${s.font_name || s.original_filename}</strong>
-            <span>${s.font_category || ''}</span>
+            <div class="taxonomy-badges">
+              ${s.style    ? `<span class="badge badge-style">${s.style}</span>` : ''}
+              ${s.theme    ? `<span class="badge badge-theme">${s.theme}</span>` : ''}
+              ${s.font_category ? `<span class="badge badge-cat">${s.font_category}</span>` : ''}
+            </div>
             <div>${(s.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}</div>
             ${s.notes ? `<span style="font-size:.75rem;color:#555">${s.notes}</span>` : ''}
           </div>
@@ -485,6 +706,84 @@
       await fetch(`${API}/${id}`, { method: 'DELETE' });
       loadSamples();
     }
+
+    // -----------------------------------------------------------------------
+    // Specimen view (Issue #13)
+    // -----------------------------------------------------------------------
+
+    async function openSpecimen(sampleId) {
+      const res = await fetch(`${API}/${sampleId}`);
+      if (!res.ok) return;
+      const s = await res.json();
+      _specimenSample = s;
+
+      document.getElementById('sp-title').textContent = s.font_name || s.original_filename;
+
+      // Build meta row
+      const metaParts = [];
+      if (s.font_category) metaParts.push(`<span class="badge badge-cat">${s.font_category}</span>`);
+      if (s.style)         metaParts.push(`<span class="badge badge-style">${s.style}</span>`);
+      if (s.theme)         metaParts.push(`<span class="badge badge-theme">${s.theme}</span>`);
+      (s.tags || []).forEach(t => metaParts.push(`<span class="tag">${t}</span>`));
+      if (s.notes) metaParts.push(`<span style="color:#555">${s.notes}</span>`);
+      document.getElementById('sp-meta').innerHTML = metaParts.join('');
+
+      document.getElementById('specimen-img').src = `/uploads/${s.filename}`;
+      document.getElementById('specimen-overlay').classList.add('open');
+
+      // Load glyphs for specimen view
+      await loadSpecimenGlyphs(sampleId);
+    }
+
+    async function loadSpecimenGlyphs(sampleId) {
+      const res = await fetch(`${API}/${sampleId}/glyphs`);
+      const glyphs = await res.json();
+
+      const section = document.getElementById('specimen-glyphs-section');
+      const heading = document.getElementById('sp-glyph-heading');
+      const grid    = document.getElementById('specimen-glyph-grid');
+
+      if (!glyphs.length) {
+        heading.textContent = '';
+        grid.innerHTML = '<p class="empty">No glyphs extracted yet. Use "Edit glyphs" to segment.</p>';
+        return;
+      }
+
+      // Sort: verified + labelled first, then by label alphabetically
+      glyphs.sort((a, b) => {
+        if (a.label && !b.label) return -1;
+        if (!a.label && b.label) return 1;
+        return (a.label || '').localeCompare(b.label || '');
+      });
+
+      heading.textContent = `${glyphs.length} extracted glyph${glyphs.length !== 1 ? 's' : ''}`;
+      grid.innerHTML = glyphs.map(g => `
+        <div class="sp-glyph-tile${g.verified ? ' verified' : ''}">
+          <img src="/uploads/glyphs/${g.filename}" alt="glyph ${g.id}"
+               onerror="this.style.opacity='.3'" />
+          <div class="sp-label">${esc(g.label || '?')}</div>
+        </div>`).join('');
+    }
+
+    function closeSpecimen() {
+      document.getElementById('specimen-overlay').classList.remove('open');
+      _specimenSample = null;
+    }
+
+    function openCorrectionFromSpecimen() {
+      if (!_specimenSample) return;
+      closeSpecimen();
+      openCorrection(
+        _specimenSample.id,
+        _specimenSample.font_name || _specimenSample.original_filename,
+        _specimenSample.filename,
+      );
+    }
+
+    // Close on backdrop click
+    document.getElementById('specimen-overlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('specimen-overlay')) closeSpecimen();
+    });
 
     // -----------------------------------------------------------------------
     // Glyph correction panel
@@ -639,7 +938,9 @@
     }
 
     // Initial load
+    loadTaxonomy();
     loadSamples();
   </script>
 </body>
 </html>
+
