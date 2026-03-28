@@ -58,6 +58,30 @@ class TestUpload:
         assert resp.status_code == 201
         assert resp.json()["notes"] == "Hand-lettered specimen"
 
+    def test_upload_with_provenance(self, client):
+        resp = client.post(
+            "/api/samples/",
+            files={"file": ("p.png", io.BytesIO(make_image_bytes()), "image/png")},
+            data={
+                "source": "https://example.com/archive/scan42.png",
+                "restoration_notes": "Despeckled and contrast-adjusted",
+            },
+        )
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["source"] == "https://example.com/archive/scan42.png"
+        assert body["restoration_notes"] == "Despeckled and contrast-adjusted"
+
+    def test_upload_without_provenance_defaults_to_null(self, client):
+        resp = client.post(
+            "/api/samples/",
+            files={"file": ("np.png", io.BytesIO(make_image_bytes()), "image/png")},
+        )
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["source"] is None
+        assert body["restoration_notes"] is None
+
 
 # ---------------------------------------------------------------------------
 # Listing (GET /api/samples/)
@@ -156,6 +180,24 @@ class TestUpdate:
         body = resp.json()
         assert body["font_name"] == "New Name"
         assert body["tags"] == ["updated"]
+
+    def test_update_provenance(self, client):
+        up = client.post(
+            "/api/samples/",
+            files={"file": ("up.png", io.BytesIO(make_image_bytes()), "image/png")},
+        )
+        sample_id = up.json()["id"]
+        resp = client.patch(
+            f"/api/samples/{sample_id}",
+            json={
+                "source": "Internet Archive scan #7",
+                "restoration_notes": "Auto-levelled",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["source"] == "Internet Archive scan #7"
+        assert body["restoration_notes"] == "Auto-levelled"
 
     def test_update_not_found(self, client):
         resp = client.patch("/api/samples/99999", json={"font_name": "X"})

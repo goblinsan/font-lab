@@ -6,6 +6,7 @@ A web application for ingesting, tagging, browsing, and curating font sample ima
 
 - **Upload** font sample images (PNG, JPEG, GIF, WebP, TIFF)
 - **Tag & annotate** samples with font name, category, comma-separated tags, and free-form notes
+- **Provenance tracking** — record the original source and any restoration notes for each sample
 - **Browse** the gallery with live filtering by font name, category, or tag
 - **Update** metadata for any existing sample
 - **Delete** samples (removes the file and the DB record)
@@ -70,6 +71,8 @@ font-lab/
 │   ├── conftest.py      # Fixtures (in-memory DB, temp upload dir)
 │   ├── test_images.py   # API tests for font sample endpoints
 │   └── test_glyphs.py   # API tests for glyph endpoints
+├── CONTRIBUTING.md
+├── LICENSE
 ├── requirements.txt
 └── .gitignore
 ```
@@ -86,6 +89,15 @@ font-lab/
 | `PATCH` | `/api/samples/{id}` | Update metadata |
 | `DELETE` | `/api/samples/{id}` | Delete sample |
 
+#### Provenance fields
+
+Every sample record exposes two provenance fields that can be set on upload or via `PATCH`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `source` | `string \| null` | Origin of the image (URL, archive name, publication, etc.) |
+| `restoration_notes` | `string \| null` | Description of any processing or restoration applied to the image |
+
 ### Glyphs
 
 | Method | Path | Description |
@@ -95,3 +107,11 @@ font-lab/
 | `GET` | `/api/glyphs/{glyph_id}` | Get single glyph |
 | `PATCH` | `/api/glyphs/{glyph_id}` | Update label, bounding box, or verified flag |
 | `DELETE` | `/api/glyphs/{glyph_id}` | Delete glyph record and crop file |
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, coding guidelines, and pull request requirements.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
