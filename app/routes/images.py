@@ -24,6 +24,9 @@ async def upload_sample(
     font_category: str | None = Form(None),
     style: str | None = Form(None),
     theme: str | None = Form(None),
+    era: str | None = Form(None),
+    provenance: str | None = Form(None),
+    confidence: float | None = Form(None),
     notes: str | None = Form(None),
     source: str | None = Form(None),
     restoration_notes: str | None = Form(None),
@@ -57,6 +60,9 @@ async def upload_sample(
         font_category=font_category,
         style=style,
         theme=theme,
+        era=era,
+        provenance=provenance,
+        confidence=confidence,
         notes=notes,
         source=source,
         restoration_notes=restoration_notes,
@@ -124,6 +130,12 @@ def update_sample(
         sample.style = payload.style
     if payload.theme is not None:
         sample.theme = payload.theme
+    if payload.era is not None:
+        sample.era = payload.era
+    if payload.provenance is not None:
+        sample.provenance = payload.provenance
+    if payload.confidence is not None:
+        sample.confidence = payload.confidence
     if payload.notes is not None:
         sample.notes = payload.notes
     if payload.source is not None:
@@ -162,6 +174,9 @@ def _to_response(sample: FontSample) -> FontSampleResponse:
         font_category=sample.font_category,
         style=sample.style,
         theme=sample.theme,
+        era=sample.era,
+        provenance=sample.provenance,
+        confidence=sample.confidence,
         notes=sample.notes,
         source=sample.source,
         restoration_notes=sample.restoration_notes,

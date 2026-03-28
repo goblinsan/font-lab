@@ -37,7 +37,7 @@ def override_get_db():
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
     """Create tables once for the whole test session."""
-    from app.models import FontSample, Glyph  # noqa: F401
+    from app.models import ApiKey, FontSample, Glyph  # noqa: F401
 
     Base.metadata.create_all(bind=test_engine)
     yield
@@ -47,16 +47,20 @@ def setup_test_db():
 @pytest.fixture(autouse=True)
 def clean_db():
     """Truncate tables between tests."""
-    from app.models import FontSample, Glyph
+    from app.models import ApiKey, FontSample, Glyph
 
     yield
     db = TestSession()
     try:
         db.query(Glyph).delete()
         db.query(FontSample).delete()
+        db.query(ApiKey).delete()
         db.commit()
     finally:
         db.close()
+    # Reset in-memory rate limit counters between tests
+    from app import auth as auth_module
+    auth_module._REQUEST_LOG.clear()
 
 
 @pytest.fixture(scope="session")

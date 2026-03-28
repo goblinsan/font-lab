@@ -3,7 +3,7 @@
 import string
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class FontSampleBase(BaseModel):
@@ -11,6 +11,9 @@ class FontSampleBase(BaseModel):
     font_category: str | None = None
     style: str | None = None
     theme: str | None = None
+    era: str | None = None
+    provenance: str | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     notes: str | None = None
     source: str | None = None
     restoration_notes: str | None = None
@@ -34,6 +37,9 @@ class FontSampleUpdate(BaseModel):
     font_category: str | None = None
     style: str | None = None
     theme: str | None = None
+    era: str | None = None
+    provenance: str | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     notes: str | None = None
     source: str | None = None
     restoration_notes: str | None = None
@@ -125,3 +131,74 @@ class GlyphCompareEntry(BaseModel):
     outline_url: str
     verified: bool = False
     synthesized: bool = False
+
+
+# ---------------------------------------------------------------------------
+# v1 API schemas
+# ---------------------------------------------------------------------------
+
+class PaginatedResponse(BaseModel):
+    """Generic paginated response wrapper."""
+
+    total: int
+    page: int
+    per_page: int
+    items: list
+
+
+class ErrorResponse(BaseModel):
+    """Standardised API error envelope."""
+
+    error: str
+    detail: str | None = None
+    code: int
+
+
+class SimilarFontEntry(BaseModel):
+    """A font entry returned from the similarity query."""
+
+    id: int
+    font_name: str | None = None
+    font_category: str | None = None
+    style: str | None = None
+    theme: str | None = None
+    era: str | None = None
+    tags: list[str] = []
+    preview_url: str
+    similarity_score: float = Field(ge=0.0, le=1.0)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PreviewConfigResponse(BaseModel):
+    """Embeddable render configuration for a font specimen."""
+
+    sample_id: int
+    font_name: str | None = None
+    preview_url: str
+    specimen_url: str
+    embed_url: str
+    available_chars: list[str] = []
+    suggested_text: str = "The quick brown fox"
+
+
+class ApiKeyCreate(BaseModel):
+    """Request body for creating a new API key."""
+
+    owner: str
+    scope: str = "read"
+    rate_limit: int = Field(default=1000, ge=1, le=100_000)
+
+
+class ApiKeyResponse(BaseModel):
+    """Response returned after creating or retrieving an API key."""
+
+    id: int
+    key: str
+    owner: str
+    scope: str
+    is_active: bool
+    rate_limit: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

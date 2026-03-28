@@ -12,11 +12,13 @@ from app.routes.integrations import router as integrations_router
 from app.routes.reconstruction import router as reconstruction_router
 from app.routes.taxonomy import router as taxonomy_router
 from app.routes.editor import router as editor_router
+from app.routes.v1.catalog import router as v1_catalog_router
+from app.routes.v1.keys import router as v1_keys_router
 
 app = FastAPI(
     title="font-lab",
     description="Font sample ingestion and management API",
-    version="0.1.0",
+    version="1.0.0",
 )
 
 # Create DB tables on startup
@@ -34,6 +36,10 @@ app.include_router(taxonomy_router)
 app.include_router(catalog_router)
 app.include_router(integrations_router)
 app.include_router(editor_router)
+
+# v1 versioned API
+app.include_router(v1_catalog_router)
+app.include_router(v1_keys_router)
 
 
 @app.get("/", include_in_schema=False)
