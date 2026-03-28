@@ -70,6 +70,9 @@ def upload_dir():
 
         img_routes.UPLOAD_DIR = tmp
         glyph_routes.UPLOAD_DIR = tmp
+        import app.routes.reconstruction as reconstruction_routes
+
+        reconstruction_routes.UPLOAD_DIR = tmp
         yield tmp
 
 
