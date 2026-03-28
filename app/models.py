@@ -22,6 +22,8 @@ class FontSample(Base):
     style: Mapped[str | None] = mapped_column(String(100), nullable=True)
     theme: Mapped[str | None] = mapped_column(String(100), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str | None] = mapped_column(Text, nullable=True)
+    restoration_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     _tags: Mapped[str | None] = mapped_column("tags", Text, nullable=True, default="[]")
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)

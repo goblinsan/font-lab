@@ -25,6 +25,8 @@ async def upload_sample(
     style: str | None = Form(None),
     theme: str | None = Form(None),
     notes: str | None = Form(None),
+    source: str | None = Form(None),
+    restoration_notes: str | None = Form(None),
     tags: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
@@ -56,6 +58,8 @@ async def upload_sample(
         style=style,
         theme=theme,
         notes=notes,
+        source=source,
+        restoration_notes=restoration_notes,
         file_size=len(content),
         content_type=file.content_type,
     )
@@ -122,6 +126,10 @@ def update_sample(
         sample.theme = payload.theme
     if payload.notes is not None:
         sample.notes = payload.notes
+    if payload.source is not None:
+        sample.source = payload.source
+    if payload.restoration_notes is not None:
+        sample.restoration_notes = payload.restoration_notes
     if payload.tags is not None:
         sample.tags = payload.tags
 
@@ -155,6 +163,8 @@ def _to_response(sample: FontSample) -> FontSampleResponse:
         style=sample.style,
         theme=sample.theme,
         notes=sample.notes,
+        source=sample.source,
+        restoration_notes=sample.restoration_notes,
         tags=sample.tags,
         file_size=sample.file_size,
         content_type=sample.content_type,

@@ -45,6 +45,8 @@ def _to_catalog_entry(sample: FontSample, glyph_count: int) -> CatalogEntryRespo
         style=sample.style,
         theme=sample.theme,
         notes=sample.notes,
+        source=sample.source,
+        restoration_notes=sample.restoration_notes,
         tags=sample.tags,
         file_size=sample.file_size,
         content_type=sample.content_type,

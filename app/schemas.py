@@ -12,6 +12,8 @@ class FontSampleBase(BaseModel):
     style: str | None = None
     theme: str | None = None
     notes: str | None = None
+    source: str | None = None
+    restoration_notes: str | None = None
     tags: list[str] = []
 
     @field_validator("tags", mode="before")
@@ -33,6 +35,8 @@ class FontSampleUpdate(BaseModel):
     style: str | None = None
     theme: str | None = None
     notes: str | None = None
+    source: str | None = None
+    restoration_notes: str | None = None
     tags: list[str] | None = None
 
 
