@@ -19,6 +19,8 @@ class FontSample(Base):
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     font_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     font_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    style: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    theme: Mapped[str | None] = mapped_column(String(100), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     _tags: Mapped[str | None] = mapped_column("tags", Text, nullable=True, default="[]")
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)

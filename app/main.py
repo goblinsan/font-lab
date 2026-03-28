@@ -8,6 +8,7 @@ from app.database import create_tables
 from app.routes.glyphs import router as glyphs_router
 from app.routes.images import router as images_router
 from app.routes.reconstruction import router as reconstruction_router
+from app.routes.taxonomy import router as taxonomy_router
 
 app = FastAPI(
     title="font-lab",
@@ -26,6 +27,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(images_router)
 app.include_router(glyphs_router)
 app.include_router(reconstruction_router)
+app.include_router(taxonomy_router)
 
 
 @app.get("/", include_in_schema=False)
