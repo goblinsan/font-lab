@@ -1,0 +1,30 @@
+"""FastAPI application entry point for font-lab."""
+
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+from app.database import create_tables
+from app.routes.images import router as images_router
+
+app = FastAPI(
+    title="font-lab",
+    description="Font sample ingestion and management API",
+    version="0.1.0",
+)
+
+# Create DB tables on startup
+create_tables()
+
+# Mount static files (frontend) and uploaded images
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# Register API routes
+app.include_router(images_router)
+
+
+@app.get("/", include_in_schema=False)
+def index():
+    """Serve the frontend SPA."""
+    return FileResponse("app/static/index.html")
