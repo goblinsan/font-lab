@@ -30,6 +30,8 @@ class FontSampleBase(BaseModel):
     use_cases: list[str] = []
     construction_traits: list[str] = []
     visual_traits: list[str] = []
+    # Curation review state (issue #50, #52)
+    review_status: str | None = None
 
     @field_validator("tags", mode="before")
     @classmethod
@@ -75,15 +77,20 @@ class FontSampleUpdate(BaseModel):
     use_cases: list[str] | None = None
     construction_traits: list[str] | None = None
     visual_traits: list[str] | None = None
+    # Curation review state (issue #50, #52)
+    review_status: str | None = None
 
 
 class FontSampleResponse(FontSampleBase):
     id: int
+    slug: str | None = None
     filename: str
     original_filename: str
     file_size: int | None = None
     content_type: str | None = None
     uploaded_at: datetime
+    is_archived: bool = False
+    archived_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -233,6 +240,27 @@ class ApiKeyResponse(BaseModel):
     scope: str
     is_active: bool
     rate_limit: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Audit trail schemas (issue #52)
+# ---------------------------------------------------------------------------
+
+class CurationAuditLogResponse(BaseModel):
+    """A single audit log entry for a curation or restoration change."""
+
+    id: int
+    sample_id: int | None = None
+    actor: str | None = None
+    action: str
+    entity_type: str | None = None
+    entity_id: int | None = None
+    field_name: str | None = None
+    old_value: str | None = None
+    new_value: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

@@ -39,6 +39,7 @@ def setup_test_db():
     """Create tables once for the whole test session."""
     from app.models import (  # noqa: F401
         ApiKey,
+        CurationAuditLog,
         FontAlias,
         FontFile,
         FontSample,
@@ -64,6 +65,7 @@ def clean_db():
     """Truncate tables between tests."""
     from app.models import (
         ApiKey,
+        CurationAuditLog,
         FontAlias,
         FontFile,
         FontSample,
@@ -92,6 +94,7 @@ def clean_db():
         db.query(FontVariant).delete()
         db.query(FontAlias).delete()
         db.query(Glyph).delete()
+        db.query(CurationAuditLog).delete()
         db.query(FontSample).delete()
         db.query(ApiKey).delete()
         db.query(TaxonomyTerm).delete()
