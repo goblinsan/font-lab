@@ -23,6 +23,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.models import (
+    CurationAuditLog,
     FontAlias,
     FontFile,
     FontSample,
@@ -36,6 +37,7 @@ from app.models import (
     SourceArtifact,
     TaxonomyDimension,
     TaxonomyTerm,
+    _make_slug,
 )
 
 
@@ -50,11 +52,29 @@ class FontSampleRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
+    # -- internal helpers ----------------------------------------------------
+
+    @staticmethod
+    def _active_filter(query: Any) -> Any:
+        """Apply a filter that excludes archived samples from *query*."""
+        return query.filter(FontSample.is_archived == False)  # noqa: E712
+
     # -- reads ---------------------------------------------------------------
 
     def get(self, sample_id: int) -> FontSample | None:
         """Return the FontSample with *sample_id*, or ``None``."""
         return self.db.get(FontSample, sample_id)
+
+    def get_by_slug(self, slug: str) -> FontSample | None:
+        """Return the FontSample matching *slug*, or ``None``.
+
+        Uses the unique slug index for O(1) lookup (issue #51).
+        """
+        return (
+            self.db.query(FontSample)
+            .filter(FontSample.slug == slug)
+            .first()
+        )
 
     def list(
         self,
@@ -70,11 +90,18 @@ class FontSampleRepository:
         restoration_status: str | None = None,
         rights_status: str | None = None,
         tag: str | None = None,
+        include_archived: bool = False,
         offset: int = 0,
         limit: int = 100,
     ) -> list[FontSample]:
-        """Return a filtered, paginated list of FontSamples."""
+        """Return a filtered, paginated list of FontSamples.
+
+        Archived samples are excluded by default; pass ``include_archived=True``
+        to include them (issue #50).
+        """
         q = self.db.query(FontSample)
+        if not include_archived:
+            q = self._active_filter(q)
         if font_name:
             q = q.filter(FontSample.font_name.ilike(f"%{font_name}%"))
         if font_category:
@@ -103,6 +130,8 @@ class FontSampleRepository:
     def count(self, **filters: Any) -> int:
         """Return a total count matching the same filters as :meth:`list`."""
         q = self.db.query(func.count(FontSample.id))
+        if not filters.get("include_archived"):
+            q = self._active_filter(q)
         if filters.get("font_name"):
             q = q.filter(FontSample.font_name.ilike(f"%{filters['font_name']}%"))
         if filters.get("style"):
@@ -121,8 +150,14 @@ class FontSampleRepository:
         limit: int = 100,
         **filters: Any,
     ) -> tuple[list[FontSample], int]:
-        """Full-text + facet search.  Returns ``(items, total)``."""
+        """Full-text + facet search.  Returns ``(items, total)``.
+
+        Archived samples are excluded unless ``include_archived=True`` is
+        passed as a filter keyword (issue #50).
+        """
         query = self.db.query(FontSample)
+        if not filters.get("include_archived"):
+            query = self._active_filter(query)
         if q:
             like = f"%{q}%"
             query = query.filter(
@@ -153,12 +188,32 @@ class FontSampleRepository:
     # -- writes --------------------------------------------------------------
 
     def add(self, sample: FontSample) -> FontSample:
-        """Add *sample* to the session (caller must commit)."""
+        """Add *sample* to the session (caller must commit).
+
+        If ``sample.slug`` is not yet set and ``sample.font_name`` is
+        available, a slug is auto-generated via :func:`~app.models._make_slug`.
+        Callers that need a guaranteed-unique slug should handle any
+        ``IntegrityError`` raised by the database unique constraint (e.g. by
+        appending the sample id after the initial commit).
+        """
+        if sample.slug is None and sample.font_name:
+            sample.slug = _make_slug(sample.font_name)
         self.db.add(sample)
         return sample
 
+    def archive(self, sample: FontSample) -> FontSample:
+        """Soft-delete *sample* by marking it archived (issue #50).
+
+        The record is retained in the database with ``is_archived=True`` so
+        that audit logs and referential integrity constraints remain intact.
+        Caller must commit.
+        """
+        sample.is_archived = True
+        sample.archived_at = datetime.now(timezone.utc)
+        return sample
+
     def delete(self, sample: FontSample) -> None:
-        """Delete *sample* from the session (caller must commit)."""
+        """Hard-delete *sample* from the session (caller must commit)."""
         self.db.delete(sample)
 
 
@@ -428,6 +483,7 @@ class SearchIndexRepository:
         index.origin_context = sample.origin_context
         index.restoration_status = sample.restoration_status
         index.rights_status = sample.rights_status
+        index.review_status = sample.review_status
         index.confidence = sample.confidence
         index.completeness = sample.completeness
         index.glyph_count = glyph_count
@@ -551,3 +607,79 @@ class GlyphCoverageRepository:
         summary.punctuation_count = punctuation
         summary.coverage_percent = min(round(coverage, 4), 1.0)
         return summary
+
+
+# ---------------------------------------------------------------------------
+# CurationAuditLogRepository
+# ---------------------------------------------------------------------------
+
+
+class CurationAuditLogRepository:
+    """Persistence contract for :class:`~app.models.CurationAuditLog`.
+
+    Provides append-only write access (audit rows must never be updated or
+    deleted) and targeted read access by sample, action category, and time
+    window (issue #52).
+    """
+
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def add(self, entry: CurationAuditLog) -> CurationAuditLog:
+        """Append an audit log entry (caller must commit)."""
+        self.db.add(entry)
+        return entry
+
+    def log(
+        self,
+        *,
+        sample_id: int | None,
+        actor: str | None,
+        action: str,
+        entity_type: str | None = None,
+        entity_id: int | None = None,
+        field_name: str | None = None,
+        old_value: Any = None,
+        new_value: Any = None,
+    ) -> CurationAuditLog:
+        """Convenience helper: create and add an audit entry in one call.
+
+        Serialises *old_value* and *new_value* as JSON strings so callers
+        can pass Python objects directly.  Caller must commit.
+        """
+        entry = CurationAuditLog(
+            sample_id=sample_id,
+            actor=actor,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            field_name=field_name,
+            old_value=json.dumps(old_value) if old_value is not None else None,
+            new_value=json.dumps(new_value) if new_value is not None else None,
+        )
+        self.db.add(entry)
+        return entry
+
+    def list_for_sample(self, sample_id: int) -> list[CurationAuditLog]:
+        """Return all audit entries for *sample_id* ordered by creation time."""
+        return (
+            self.db.query(CurationAuditLog)
+            .filter(CurationAuditLog.sample_id == sample_id)
+            .order_by(CurationAuditLog.created_at)
+            .all()
+        )
+
+    def list_by_action(
+        self,
+        action: str,
+        *,
+        limit: int = 100,
+    ) -> list[CurationAuditLog]:
+        """Return the most recent *limit* entries for a given *action* type."""
+        return (
+            self.db.query(CurationAuditLog)
+            .filter(CurationAuditLog.action == action)
+            .order_by(CurationAuditLog.created_at.desc())
+            .limit(limit)
+            .all()
+        )

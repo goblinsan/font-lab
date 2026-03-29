@@ -1,11 +1,13 @@
 """SQLAlchemy ORM models for font-lab."""
 
 import json
+import re
 import secrets
 from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -20,6 +22,21 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, backref as sa_ba
 from app.database import Base
 
 
+def _make_slug(text: str) -> str:
+    """Convert *text* into a lowercase, hyphen-separated URL slug.
+
+    Used by :class:`~app.repository.FontSampleRepository` to auto-generate
+    a slug from ``font_name`` when one is not provided.  Callers that need
+    a guaranteed-unique slug should use this function then handle any
+    ``IntegrityError`` raised by the database unique constraint.
+    """
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_]+", "-", text)
+    text = re.sub(r"-{2,}", "-", text)
+    return text.strip("-")
+
+
 class FontSample(Base):
     """A scanned or photographed font sample image with metadata."""
 
@@ -28,6 +45,8 @@ class FontSample(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     filename: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    # URL-safe slug derived from font_name; used for stable external references (issue #51).
+    slug: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True, index=True)
     font_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     font_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     style: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -62,6 +81,13 @@ class FontSample(Base):
     _visual_traits: Mapped[str | None] = mapped_column(
         "visual_traits", Text, nullable=True, default="[]"
     )
+    # Curation review state: pending | approved | rejected | needs_review (issue #50, #52)
+    review_status: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, index=True, default="pending"
+    )
+    # Soft-deletion / archive support (issue #50)
+    is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     @property
     def tags(self) -> list[str]:
@@ -152,7 +178,7 @@ class ApiKey(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
-    owner: Mapped[str] = mapped_column(String(255), nullable=False)
+    owner: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     scope: Mapped[str] = mapped_column(String(100), nullable=False, default="read")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     rate_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=1000)
@@ -544,6 +570,8 @@ class FontSearchIndex(Base):
     origin_context: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     restoration_status: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     rights_status: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    # Denormalized review/curation state for fast status-based filtering (issue #51, #52)
+    review_status: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     completeness: Mapped[float | None] = mapped_column(Float, nullable=True)
     glyph_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -571,6 +599,14 @@ class FontSearchIndex(Base):
     )
 
     sample = relationship("FontSample", back_populates="search_index")
+
+    # Composite indexes for combined facet filtering and similarity joins (issue #51)
+    __table_args__ = (
+        Index("ix_search_category_style", "font_category", "style"),
+        Index("ix_search_restoration_rights", "restoration_status", "rights_status"),
+        Index("ix_search_confidence_completeness", "confidence", "completeness"),
+        Index("ix_search_review_status_glyph_count", "review_status", "glyph_count"),
+    )
 
     @property
     def tags(self) -> list[str]:
@@ -637,6 +673,58 @@ class FontSearchIndex(Base):
     @feature_vector.setter
     def feature_vector(self, value: dict) -> None:
         self._feature_vector = json.dumps(value)
+
+
+# ---------------------------------------------------------------------------
+# Issue #52 – Audit trail for curation and restoration changes
+# ---------------------------------------------------------------------------
+
+
+class CurationAuditLog(Base):
+    """An immutable audit log entry recording a curation or restoration change.
+
+    Captures metadata edits, review actions, provenance updates, and
+    publication/review status transitions so that every significant change
+    to a FontSample can be traced back to its actor and timestamp.
+
+    Audit entries are kept even if the related FontSample is deleted
+    (``ondelete="SET NULL"`` on the FK), so the historical record is preserved.
+    """
+
+    __tablename__ = "curation_audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    # sample_id is nullable so audit rows survive hard-deletion of a sample.
+    sample_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("font_samples.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    # Who performed the action (email, username, or system process name)
+    actor: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # High-level action category
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Which entity type was affected (sample | variant | glyph | provenance)
+    entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # PK of the affected entity (for variant/glyph/provenance rows)
+    entity_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # For metadata_edit actions: the field that was changed
+    field_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # JSON-serialised previous value (NULL for creation events)
+    old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # JSON-serialised new value (NULL for deletion events)
+    new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        Index("ix_audit_sample_action", "sample_id", "action"),
+        Index("ix_audit_created_at", "created_at"),
+    )
 
 
 # ---------------------------------------------------------------------------
