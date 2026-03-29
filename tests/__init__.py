@@ -1,1 +1,0 @@
-"""font-lab tests package."""

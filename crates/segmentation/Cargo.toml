@@ -1,0 +1,10 @@
+[package]
+name = "font-lab-segmentation"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+font-lab-image-core = { path = "../image_core" }
+image = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }

@@ -1,1 +1,0 @@
-"""font-lab application package."""

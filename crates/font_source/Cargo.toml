@@ -1,0 +1,9 @@
+[package]
+name = "font-lab-font-source"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+font-lab-domain = { path = "../domain" }
+norad = { workspace = true }
+thiserror = { workspace = true }

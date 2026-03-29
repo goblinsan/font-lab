@@ -1,0 +1,130 @@
+.back {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.summary {
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.layout {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 0.5rem;
+  flex: 1;
+  align-content: start;
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 0.25rem;
+}
+.cell:hover {
+  border-color: var(--color-primary);
+}
+.cellSelected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+.status_approved {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+.status_rejected {
+  border-color: var(--color-danger);
+  background: #fef2f2;
+}
+
+.char {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.dims {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+
+.detail {
+  width: 280px;
+  flex-shrink: 0;
+  padding: 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  align-self: start;
+}
+
+.detail h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.meta {
+  width: 100%;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.meta th {
+  text-align: left;
+  padding: 0.2rem 0.5rem 0.2rem 0;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.meta td {
+  font-family: var(--font-mono);
+}
+
+.labelRow {
+  margin-bottom: 0.75rem;
+}
+.labelInput {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.btnRow {
+  display: flex;
+  gap: 0.5rem;
+}
+.btnRow button {
+  flex: 1;
+  padding: 0.35rem 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.85rem;
+}
+.approve {
+  color: #16a34a;
+  border-color: #16a34a !important;
+}
+.reject {
+  color: var(--color-danger);
+  border-color: var(--color-danger) !important;
+}
+.delete {
+  color: var(--color-text-muted);
+}

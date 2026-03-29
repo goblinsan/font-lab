@@ -1,0 +1,18 @@
+[package]
+name = "font-lab-application"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+font-lab-domain = { path = "../domain" }
+font-lab-db = { path = "../db" }
+font-lab-blob-store = { path = "../blob_store" }
+font-lab-segmentation = { path = "../segmentation" }
+font-lab-font-engine = { path = "../font_engine" }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }

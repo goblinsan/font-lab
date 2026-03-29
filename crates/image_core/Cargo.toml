@@ -1,0 +1,8 @@
+[package]
+name = "font-lab-image-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+image = { workspace = true }
+thiserror = { workspace = true }
