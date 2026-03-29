@@ -30,6 +30,21 @@ def get_db():
 
 def create_tables():
     """Create all database tables."""
-    from app.models import ApiKey, FontSample, Glyph  # noqa: F401 – ensure models are registered
+    from app.models import (  # noqa: F401 – ensure models are registered
+        ApiKey,
+        FontAlias,
+        FontFile,
+        FontSample,
+        FontSampleTaxonomy,
+        FontSearchIndex,
+        FontVariant,
+        Glyph,
+        GlyphCoverageSummary,
+        PreviewAsset,
+        ProvenanceRecord,
+        SourceArtifact,
+        TaxonomyDimension,
+        TaxonomyTerm,
+    )
 
     Base.metadata.create_all(bind=engine)

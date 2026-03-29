@@ -37,7 +37,22 @@ def override_get_db():
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
     """Create tables once for the whole test session."""
-    from app.models import ApiKey, FontSample, Glyph  # noqa: F401
+    from app.models import (  # noqa: F401
+        ApiKey,
+        FontAlias,
+        FontFile,
+        FontSample,
+        FontSampleTaxonomy,
+        FontSearchIndex,
+        FontVariant,
+        Glyph,
+        GlyphCoverageSummary,
+        PreviewAsset,
+        ProvenanceRecord,
+        SourceArtifact,
+        TaxonomyDimension,
+        TaxonomyTerm,
+    )
 
     Base.metadata.create_all(bind=test_engine)
     yield
@@ -47,14 +62,40 @@ def setup_test_db():
 @pytest.fixture(autouse=True)
 def clean_db():
     """Truncate tables between tests."""
-    from app.models import ApiKey, FontSample, Glyph
+    from app.models import (
+        ApiKey,
+        FontAlias,
+        FontFile,
+        FontSample,
+        FontSampleTaxonomy,
+        FontSearchIndex,
+        FontVariant,
+        Glyph,
+        GlyphCoverageSummary,
+        PreviewAsset,
+        ProvenanceRecord,
+        SourceArtifact,
+        TaxonomyDimension,
+        TaxonomyTerm,
+    )
 
     yield
     db = TestSession()
     try:
+        db.query(ProvenanceRecord).delete()
+        db.query(SourceArtifact).delete()
+        db.query(FontSampleTaxonomy).delete()
+        db.query(FontSearchIndex).delete()
+        db.query(GlyphCoverageSummary).delete()
+        db.query(PreviewAsset).delete()
+        db.query(FontFile).delete()
+        db.query(FontVariant).delete()
+        db.query(FontAlias).delete()
         db.query(Glyph).delete()
         db.query(FontSample).delete()
         db.query(ApiKey).delete()
+        db.query(TaxonomyTerm).delete()
+        db.query(TaxonomyDimension).delete()
         db.commit()
     finally:
         db.close()
