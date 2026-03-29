@@ -62,6 +62,7 @@ def _to_catalog_entry(sample: FontSample, glyph_count: int) -> CatalogEntryRespo
         font_name=sample.font_name,
         font_category=sample.font_category,
         style=sample.style,
+        genre=sample.genre,
         theme=sample.theme,
         era=sample.era,
         provenance=sample.provenance,
@@ -75,6 +76,16 @@ def _to_catalog_entry(sample: FontSample, glyph_count: int) -> CatalogEntryRespo
         uploaded_at=sample.uploaded_at,
         preview_url=_preview_url(sample.filename),
         glyph_count=glyph_count,
+        origin_context=sample.origin_context,
+        source_type=sample.source_type,
+        restoration_status=sample.restoration_status,
+        rights_status=sample.rights_status,
+        rights_notes=sample.rights_notes,
+        completeness=sample.completeness,
+        moods=sample.moods,
+        use_cases=sample.use_cases,
+        construction_traits=sample.construction_traits,
+        visual_traits=sample.visual_traits,
     )
 
 
@@ -96,15 +107,22 @@ def list_fonts_v1(
     order: Literal["asc", "desc"] = Query("desc", description="Sort direction"),
     font_category: str | None = Query(None),
     style: str | None = Query(None),
+    genre: str | None = Query(None),
     theme: str | None = Query(None),
     era: str | None = Query(None),
+    origin_context: str | None = Query(None),
+    source_type: str | None = Query(None),
+    restoration_status: str | None = Query(None),
+    rights_status: str | None = Query(None),
     db: Session = Depends(get_db),
     _key: ApiKey | None = Depends(get_api_key),
 ):
     """Return a paginated list of all font catalog entries.
 
-    Supports optional filtering by ``font_category``, ``style``, ``theme``, and
-    ``era``, plus server-side sorting and pagination.
+    Supports optional filtering by ``font_category``, ``style``, ``genre``,
+    ``theme``, ``era``, ``origin_context``, ``source_type``,
+    ``restoration_status``, and ``rights_status``, plus server-side sorting
+    and pagination.
 
     Response shape::
 
@@ -121,10 +139,20 @@ def list_fonts_v1(
         query = query.filter(FontSample.font_category.ilike(f"%{font_category}%"))
     if style:
         query = query.filter(FontSample.style.ilike(f"%{style}%"))
+    if genre:
+        query = query.filter(FontSample.genre.ilike(f"%{genre}%"))
     if theme:
         query = query.filter(FontSample.theme.ilike(f"%{theme}%"))
     if era:
         query = query.filter(FontSample.era.ilike(f"%{era}%"))
+    if origin_context:
+        query = query.filter(FontSample.origin_context.ilike(f"%{origin_context}%"))
+    if source_type:
+        query = query.filter(FontSample.source_type.ilike(f"%{source_type}%"))
+    if restoration_status:
+        query = query.filter(FontSample.restoration_status.ilike(f"%{restoration_status}%"))
+    if rights_status:
+        query = query.filter(FontSample.rights_status.ilike(f"%{rights_status}%"))
 
     sort_col = _SORT_FIELDS.get(sort, FontSample.uploaded_at)
     query = query.order_by(sort_col.asc() if order == "asc" else sort_col.desc())
@@ -153,8 +181,13 @@ def search_fonts_v1(
     font_name: str | None = Query(None),
     font_category: str | None = Query(None),
     style: str | None = Query(None),
+    genre: str | None = Query(None),
     theme: str | None = Query(None),
     era: str | None = Query(None),
+    origin_context: str | None = Query(None),
+    source_type: str | None = Query(None),
+    restoration_status: str | None = Query(None),
+    rights_status: str | None = Query(None),
     tag: str | None = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -166,9 +199,8 @@ def search_fonts_v1(
     """Search the font catalog by text, tags, themes, visual traits, and era.
 
     ``q`` is matched case-insensitively against ``font_name``, ``font_category``,
-    ``style``, ``theme``, ``era``, and ``notes``.  Narrower filters (``font_name``,
-    ``font_category``, ``style``, ``theme``, ``era``, ``tag``) can be combined with
-    or without ``q``.
+    ``style``, ``genre``, ``theme``, ``era``, ``origin_context``, and ``notes``.
+    Narrower filters can be combined with or without ``q``.
 
     Response shape::
 
@@ -188,8 +220,10 @@ def search_fonts_v1(
                 FontSample.font_name.ilike(like),
                 FontSample.font_category.ilike(like),
                 FontSample.style.ilike(like),
+                FontSample.genre.ilike(like),
                 FontSample.theme.ilike(like),
                 FontSample.era.ilike(like),
+                FontSample.origin_context.ilike(like),
                 FontSample.notes.ilike(like),
             )
         )
@@ -199,10 +233,20 @@ def search_fonts_v1(
         query = query.filter(FontSample.font_category.ilike(f"%{font_category}%"))
     if style:
         query = query.filter(FontSample.style.ilike(f"%{style}%"))
+    if genre:
+        query = query.filter(FontSample.genre.ilike(f"%{genre}%"))
     if theme:
         query = query.filter(FontSample.theme.ilike(f"%{theme}%"))
     if era:
         query = query.filter(FontSample.era.ilike(f"%{era}%"))
+    if origin_context:
+        query = query.filter(FontSample.origin_context.ilike(f"%{origin_context}%"))
+    if source_type:
+        query = query.filter(FontSample.source_type.ilike(f"%{source_type}%"))
+    if restoration_status:
+        query = query.filter(FontSample.restoration_status.ilike(f"%{restoration_status}%"))
+    if rights_status:
+        query = query.filter(FontSample.rights_status.ilike(f"%{rights_status}%"))
     if tag:
         # Tags are stored as JSON text; use a LIKE filter to push filtering
         # to the database before loading rows into memory.
@@ -252,31 +296,45 @@ def _similarity_score(target: FontSample, candidate: FontSample) -> float:
     """Compute a [0, 1] similarity score between two FontSample records.
 
     Weights:
-    - style match      → 0.30
-    - theme match      → 0.25
-    - font_category    → 0.20
-    - era match        → 0.10
-    - shared tags      → up to 0.15 (proportional to Jaccard similarity)
+    - style match           → 0.25
+    - genre match           → 0.10
+    - theme match           → 0.20
+    - font_category match   → 0.15
+    - era match             → 0.05
+    - shared tags           → up to 0.10 (Jaccard)
+    - shared moods          → up to 0.05 (Jaccard)
+    - shared visual_traits  → up to 0.10 (Jaccard)
     """
     score = 0.0
     if target.style and candidate.style and target.style.lower() == candidate.style.lower():
-        score += 0.30
-    if target.theme and candidate.theme and target.theme.lower() == candidate.theme.lower():
         score += 0.25
+    if target.genre and candidate.genre and target.genre.lower() == candidate.genre.lower():
+        score += 0.10
+    if target.theme and candidate.theme and target.theme.lower() == candidate.theme.lower():
+        score += 0.20
     if (
         target.font_category
         and candidate.font_category
         and target.font_category.lower() == candidate.font_category.lower()
     ):
-        score += 0.20
+        score += 0.15
     if target.era and candidate.era and target.era.lower() == candidate.era.lower():
-        score += 0.10
+        score += 0.05
     # Tag Jaccard similarity
     t_tags = set(t.lower() for t in target.tags)
     c_tags = set(t.lower() for t in candidate.tags)
     if t_tags or c_tags:
-        jaccard = len(t_tags & c_tags) / len(t_tags | c_tags)
-        score += 0.15 * jaccard
+        score += 0.10 * len(t_tags & c_tags) / len(t_tags | c_tags)
+    # Mood Jaccard similarity
+    t_moods = set(m.lower() for m in target.moods)
+    c_moods = set(m.lower() for m in candidate.moods)
+    if t_moods or c_moods:
+        score += 0.05 * len(t_moods & c_moods) / len(t_moods | c_moods)
+    # Visual trait Jaccard similarity
+    t_vt = set(v.lower() for v in target.visual_traits)
+    c_vt = set(v.lower() for v in candidate.visual_traits)
+    if t_vt or c_vt:
+        score += 0.10 * len(t_vt & c_vt) / len(t_vt | c_vt)
     return round(score, 4)
 
 
@@ -317,9 +375,12 @@ def similar_fonts(
             font_name=c.font_name,
             font_category=c.font_category,
             style=c.style,
+            genre=c.genre,
             theme=c.theme,
             era=c.era,
             tags=c.tags,
+            moods=c.moods,
+            visual_traits=c.visual_traits,
             preview_url=_preview_url(c.filename),
             similarity_score=s,
         )

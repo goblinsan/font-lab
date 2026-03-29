@@ -23,6 +23,7 @@ async def upload_sample(
     font_name: str | None = Form(None),
     font_category: str | None = Form(None),
     style: str | None = Form(None),
+    genre: str | None = Form(None),
     theme: str | None = Form(None),
     era: str | None = Form(None),
     provenance: str | None = Form(None),
@@ -31,6 +32,16 @@ async def upload_sample(
     source: str | None = Form(None),
     restoration_notes: str | None = Form(None),
     tags: str | None = Form(None),
+    origin_context: str | None = Form(None),
+    source_type: str | None = Form(None),
+    restoration_status: str | None = Form(None),
+    rights_status: str | None = Form(None),
+    rights_notes: str | None = Form(None),
+    completeness: float | None = Form(None),
+    moods: str | None = Form(None),
+    use_cases: str | None = Form(None),
+    construction_traits: str | None = Form(None),
+    visual_traits: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     """Upload a font sample image with optional metadata."""
@@ -51,7 +62,8 @@ async def upload_sample(
         content = await file.read()
         await out.write(content)
 
-    tag_list = [t.strip() for t in (tags or "").split(",") if t.strip()]
+    def _parse_csv(s: str | None) -> list[str]:
+        return [t.strip() for t in (s or "").split(",") if t.strip()]
 
     sample = FontSample(
         filename=unique_filename,
@@ -59,6 +71,7 @@ async def upload_sample(
         font_name=font_name,
         font_category=font_category,
         style=style,
+        genre=genre,
         theme=theme,
         era=era,
         provenance=provenance,
@@ -68,8 +81,18 @@ async def upload_sample(
         restoration_notes=restoration_notes,
         file_size=len(content),
         content_type=file.content_type,
+        origin_context=origin_context,
+        source_type=source_type,
+        restoration_status=restoration_status,
+        rights_status=rights_status,
+        rights_notes=rights_notes,
+        completeness=completeness,
     )
-    sample.tags = tag_list
+    sample.tags = _parse_csv(tags)
+    sample.moods = _parse_csv(moods)
+    sample.use_cases = _parse_csv(use_cases)
+    sample.construction_traits = _parse_csv(construction_traits)
+    sample.visual_traits = _parse_csv(visual_traits)
 
     db.add(sample)
     db.commit()
@@ -128,6 +151,8 @@ def update_sample(
         sample.font_category = payload.font_category
     if payload.style is not None:
         sample.style = payload.style
+    if payload.genre is not None:
+        sample.genre = payload.genre
     if payload.theme is not None:
         sample.theme = payload.theme
     if payload.era is not None:
@@ -144,6 +169,26 @@ def update_sample(
         sample.restoration_notes = payload.restoration_notes
     if payload.tags is not None:
         sample.tags = payload.tags
+    if payload.origin_context is not None:
+        sample.origin_context = payload.origin_context
+    if payload.source_type is not None:
+        sample.source_type = payload.source_type
+    if payload.restoration_status is not None:
+        sample.restoration_status = payload.restoration_status
+    if payload.rights_status is not None:
+        sample.rights_status = payload.rights_status
+    if payload.rights_notes is not None:
+        sample.rights_notes = payload.rights_notes
+    if payload.completeness is not None:
+        sample.completeness = payload.completeness
+    if payload.moods is not None:
+        sample.moods = payload.moods
+    if payload.use_cases is not None:
+        sample.use_cases = payload.use_cases
+    if payload.construction_traits is not None:
+        sample.construction_traits = payload.construction_traits
+    if payload.visual_traits is not None:
+        sample.visual_traits = payload.visual_traits
 
     db.commit()
     db.refresh(sample)
@@ -173,6 +218,7 @@ def _to_response(sample: FontSample) -> FontSampleResponse:
         font_name=sample.font_name,
         font_category=sample.font_category,
         style=sample.style,
+        genre=sample.genre,
         theme=sample.theme,
         era=sample.era,
         provenance=sample.provenance,
@@ -184,4 +230,14 @@ def _to_response(sample: FontSample) -> FontSampleResponse:
         file_size=sample.file_size,
         content_type=sample.content_type,
         uploaded_at=sample.uploaded_at,
+        origin_context=sample.origin_context,
+        source_type=sample.source_type,
+        restoration_status=sample.restoration_status,
+        rights_status=sample.rights_status,
+        rights_notes=sample.rights_notes,
+        completeness=sample.completeness,
+        moods=sample.moods,
+        use_cases=sample.use_cases,
+        construction_traits=sample.construction_traits,
+        visual_traits=sample.visual_traits,
     )

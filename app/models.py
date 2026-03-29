@@ -21,6 +21,7 @@ class FontSample(Base):
     font_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     font_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     style: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    genre: Mapped[str | None] = mapped_column(String(100), nullable=True)
     theme: Mapped[str | None] = mapped_column(String(100), nullable=True)
     era: Mapped[str | None] = mapped_column(String(100), nullable=True)
     provenance: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -36,6 +37,21 @@ class FontSample(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+    # Extended taxonomy fields (issues #34, #35, #37, #38)
+    origin_context: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    source_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    restoration_status: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    rights_status: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    rights_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completeness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    _moods: Mapped[str | None] = mapped_column("moods", Text, nullable=True, default="[]")
+    _use_cases: Mapped[str | None] = mapped_column("use_cases", Text, nullable=True, default="[]")
+    _construction_traits: Mapped[str | None] = mapped_column(
+        "construction_traits", Text, nullable=True, default="[]"
+    )
+    _visual_traits: Mapped[str | None] = mapped_column(
+        "visual_traits", Text, nullable=True, default="[]"
+    )
 
     @property
     def tags(self) -> list[str]:
@@ -47,6 +63,50 @@ class FontSample(Base):
     @tags.setter
     def tags(self, value: list[str]) -> None:
         self._tags = json.dumps(value)
+
+    @property
+    def moods(self) -> list[str]:
+        try:
+            return json.loads(self._moods or "[]")
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    @moods.setter
+    def moods(self, value: list[str]) -> None:
+        self._moods = json.dumps(value)
+
+    @property
+    def use_cases(self) -> list[str]:
+        try:
+            return json.loads(self._use_cases or "[]")
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    @use_cases.setter
+    def use_cases(self, value: list[str]) -> None:
+        self._use_cases = json.dumps(value)
+
+    @property
+    def construction_traits(self) -> list[str]:
+        try:
+            return json.loads(self._construction_traits or "[]")
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    @construction_traits.setter
+    def construction_traits(self, value: list[str]) -> None:
+        self._construction_traits = json.dumps(value)
+
+    @property
+    def visual_traits(self) -> list[str]:
+        try:
+            return json.loads(self._visual_traits or "[]")
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    @visual_traits.setter
+    def visual_traits(self, value: list[str]) -> None:
+        self._visual_traits = json.dumps(value)
 
 
 class Glyph(Base):
