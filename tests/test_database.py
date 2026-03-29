@@ -951,3 +951,137 @@ class TestCurationAuditLog:
             assert len(all_entries) == 1
         finally:
             db.close()
+
+
+# ---------------------------------------------------------------------------
+# Issue #54 – Database migration chain
+# ---------------------------------------------------------------------------
+
+
+class TestMigrationChain:
+    def test_upgrade_head_creates_all_tables(self):
+        """alembic upgrade head runs cleanly on a fresh database (issue #54).
+
+        Applies both migration revisions and checks every expected table is
+        present in the resulting schema.
+        """
+        import tempfile
+        import os
+        from alembic.config import Config
+        from alembic import command
+        from sqlalchemy import create_engine, inspect
+
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = f.name
+        try:
+            db_url = f"sqlite:///{db_path}"
+            cfg = Config("alembic.ini")
+            cfg.set_main_option("sqlalchemy.url", db_url)
+            command.upgrade(cfg, "head")
+
+            engine = create_engine(db_url)
+            table_names = set(inspect(engine).get_table_names())
+            engine.dispose()
+
+            expected = {
+                "font_samples",
+                "glyphs",
+                "api_keys",
+                "font_variants",
+                "font_aliases",
+                "font_files",
+                "preview_assets",
+                "glyph_coverage_summaries",
+                "source_artifacts",
+                "provenance_records",
+                "taxonomy_dimensions",
+                "taxonomy_terms",
+                "font_sample_taxonomy",
+                "font_search_index",
+                "curation_audit_log",
+            }
+            assert expected.issubset(table_names), (
+                f"Missing tables after upgrade: {expected - table_names}"
+            )
+        finally:
+            os.unlink(db_path)
+
+    def test_downgrade_base_removes_app_tables(self):
+        """alembic downgrade base cleanly removes all application tables (issue #54)."""
+        import tempfile
+        import os
+        from alembic.config import Config
+        from alembic import command
+        from sqlalchemy import create_engine, inspect
+
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = f.name
+        try:
+            db_url = f"sqlite:///{db_path}"
+            cfg = Config("alembic.ini")
+            cfg.set_main_option("sqlalchemy.url", db_url)
+            command.upgrade(cfg, "head")
+            command.downgrade(cfg, "base")
+
+            engine = create_engine(db_url)
+            table_names = set(inspect(engine).get_table_names())
+            engine.dispose()
+
+            app_tables = {
+                "font_samples", "glyphs", "api_keys", "font_variants",
+                "font_aliases", "font_files", "preview_assets",
+                "glyph_coverage_summaries", "source_artifacts",
+                "provenance_records", "taxonomy_dimensions", "taxonomy_terms",
+                "font_sample_taxonomy", "font_search_index", "curation_audit_log",
+            }
+            remaining = app_tables & table_names
+            assert not remaining, f"Tables not removed by downgrade: {remaining}"
+        finally:
+            os.unlink(db_path)
+
+
+# ---------------------------------------------------------------------------
+# Issue #56 – Seed taxonomy and sample data
+# ---------------------------------------------------------------------------
+
+
+class TestTaxonomySeed:
+    def test_seed_populates_all_dimensions(self):
+        """seed() inserts all expected taxonomy dimensions (issue #56)."""
+        db = TestSession()
+        try:
+            from scripts.seed_taxonomy import seed, DIMENSION_DATA
+            seed(db)
+            dims = db.query(TaxonomyDimension).all()
+            dim_names = {d.name for d in dims}
+            assert dim_names == set(DIMENSION_DATA.keys())
+        finally:
+            db.close()
+
+    def test_seed_populates_terms(self):
+        """seed() inserts vocabulary terms for each dimension (issue #56)."""
+        db = TestSession()
+        try:
+            from scripts.seed_taxonomy import seed
+            seed(db)
+            total_terms = db.query(TaxonomyTerm).count()
+            assert total_terms > 0, "No taxonomy terms were seeded"
+        finally:
+            db.close()
+
+    def test_seed_is_idempotent(self):
+        """Running seed() twice does not create duplicate rows (issue #56)."""
+        db = TestSession()
+        try:
+            from scripts.seed_taxonomy import seed
+            seed(db)
+            count_after_first = db.query(TaxonomyDimension).count()
+            terms_after_first = db.query(TaxonomyTerm).count()
+            seed(db)
+            count_after_second = db.query(TaxonomyDimension).count()
+            terms_after_second = db.query(TaxonomyTerm).count()
+            assert count_after_first == count_after_second
+            assert terms_after_first == terms_after_second
+        finally:
+            db.close()
+
